@@ -2,7 +2,7 @@
 #                                             Setup                                             #
 #===============================================================================================#
 # Libraries
-from vpython import scene, box, sphere, cylinder, arrow, vector, rate
+from vpython import scene, box, sphere, cylinder, arrow, vector, rate, dot
 from random import random, uniform
 from math import cos, sin, radians
 from time import sleep
@@ -12,6 +12,8 @@ from time import sleep
 #===============================================================================================#
 #                                        Common Functions                                       #
 #===============================================================================================#
+RGB2VEC = lambda r, g, b: vector(r/255, g/255, b/255)
+
 def createWalls():
     if solidWalls:
         s2 = 2 * side - thickness
@@ -25,7 +27,7 @@ def createWalls():
         
         wallC = box(pos=vector(0, 0, -side), size=vector(s3, s3, thickness), color=vector(0, 0, 1))
     else:
-        edgeColor = vector(0, 0, 1)
+        edgeColor = vector(1, 0, 1)
         edgeRadius = .2
         edgeLength = 2*side
 
@@ -71,7 +73,7 @@ def generate3DVelocity():
 
         return vector(x, y, z)
     else:
-        return vector(uniform(-1, 1), uniform(-1, 1), uniform(-1, 1))
+        return vector.random()
     
 def generate3DBall():
     if randomPosition:
@@ -151,8 +153,10 @@ def generate2DBall():
     ball.v = generate2DVelocity()
     ball.m = 2
 
-    ball.unitNormal = arrow(round=True, pos=ball.pos, axis=vector(0, 0, 0), length=0)
-    ball.unitTangent = arrow(round=True, pos=ball.pos, axis=vector(0, 0, 0), length=0)
+    ball.unitNormal = arrow(round=True, pos=ball.pos, axis=vector(0, 0, 0), length=0, color=RGB2VEC(252, 152, 3))
+    ball.unitTangent = arrow(round=True, pos=ball.pos, axis=vector(0, 0, 0), length=0, color=RGB2VEC(244, 252, 3))
+    ball.unitVelocity = arrow(round=True, pos=ball.pos, axis=ball.v, length=0, color=RGB2VEC(3, 252, 240))
+    ball.unitNewVelocity = arrow(round=True, pos=ball.pos, axis=ball.v, length=0, color=RGB2VEC(3, 252, 240))
 
     return ball
 
@@ -174,8 +178,10 @@ def collision2D(iterator):
             yCol = abs(b1.pos.y - b2.pos.y) < b1.radius + b2.radius
             if (xCol and yCol):
                 print('Collision!')
+                # b1.v = b1.unitNewVelocity.axis
+                # b2.v = b2.unitNewVelocity.axis
 
-def draw2DNormal(iterator):
+def draw2D(iterator):
     lengthBuffer = 2
     for i, b1 in enumerate(iterator):
         for b2 in iterator[i+1:]:
@@ -197,6 +203,40 @@ def draw2DNormal(iterator):
             b2.unitTangent.pos = (b2.pos + b1.pos)/2
             b2.unitTangent.axis = vector(y, -x, 0)
             b2.unitTangent.length = lengthBuffer*b2.radius
+
+            b1.unitVelocity.pos = b1.pos
+            b1.unitVelocity.axis = b1.v
+            b1.unitVelocity.length = lengthBuffer*b1.radius
+
+            b2.unitVelocity.pos = b2.pos
+            b2.unitVelocity.axis = b2.v
+            b2.unitVelocity.length = lengthBuffer*b2.radius
+
+            # v1n = dot(b1.v, b1.unitNormal.axis)
+            # v1t = dot(b1.v, b1.unitTangent.axis)
+            # v2n = dot(b2.v, b2.unitNormal.axis)
+            # v2t = dot(b2.v, b2.unitTangent.axis)
+
+            # v1n_ = (v1n * (b1.m - b2.m) + 2 * b2.m * v2n) / (b1.m + b2.m)
+            # v1t_ = v1t
+            # v2n_ = (v2n * (b2.m - b1.m) + 2 * b1.m * v1n) / (b2.m + b1.m)
+            # v2t_ = v2t
+
+            # v1n_ *= b1.unitNormal.axis
+            # v1t_ *= b1.unitTangent.axis
+            # v2n_ *= b2.unitNormal.axis
+            # v2t_ *= b2.unitTangent.axis
+
+            # v1_ = v1n_ + v1t_
+            # v2_ = v2n_ + v2t_
+
+            # b1.unitNewVelocity.pos = (b1.pos + b2.pos)/2
+            # b1.unitNewVelocity.axis = v1_
+            # b1.unitNewVelocity.length = lengthBuffer*b1.radius
+
+            # b2.unitNewVelocity.pos = (b2.pos + b1.pos)/2
+            # b2.unitNewVelocity.axis = v2_
+            # b2.unitNewVelocity.length = lengthBuffer*b2.radius
 
 
 
@@ -229,8 +269,8 @@ def run2D():
     while(play):
         rate(fps)
         step2D(balls)
-        # collision2D(balls)
-        draw2DNormal(balls)
+        draw2D(balls)
+        collision2D(balls)
     
     return
 
@@ -266,7 +306,7 @@ solidWalls = False
 
 # Consts
 fps = 300
-dt = .3
+dt = .1
 
 # Running
 createWalls()
