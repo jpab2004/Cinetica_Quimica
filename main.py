@@ -2,7 +2,7 @@
 #                                             Setup                                             #
 #===============================================================================================#
 # Libraries
-from vpython import scene, box, sphere, cylinder, vector, rate
+from vpython import scene, box, sphere, cylinder, arrow, vector, rate
 from random import random, uniform
 from math import cos, sin, radians
 from time import sleep
@@ -151,6 +151,9 @@ def generate2DBall():
     ball.v = generate2DVelocity()
     ball.m = 2
 
+    ball.unitNormal = arrow(round=True, pos=ball.pos, axis=vector(0, 0, 0), length=0)
+    ball.unitTangent = arrow(round=True, pos=ball.pos, axis=vector(0, 0, 0), length=0)
+
     return ball
 
 def step2D(iterator):
@@ -172,12 +175,35 @@ def collision2D(iterator):
             if (xCol and yCol):
                 print('Collision!')
 
+def draw2DNormal(iterator):
+    lengthBuffer = 2
+    for i, b1 in enumerate(iterator):
+        for b2 in iterator[i+1:]:
+            x = b2.pos.x - b1.pos.x
+            y = b2.pos.y - b1.pos.y
+
+            b1.unitNormal.pos = b1.pos
+            b1.unitNormal.axis = vector(x, y, 0)
+            b1.unitNormal.length = lengthBuffer*b1.radius
+
+            b2.unitNormal.pos = b2.pos
+            b2.unitNormal.axis = vector(-x, -y, 0)
+            b2.unitNormal.length = lengthBuffer*b2.radius
+
+            b1.unitTangent.pos = (b1.pos + b2.pos)/2
+            b1.unitTangent.axis = vector(-y, x, 0)
+            b1.unitTangent.length = lengthBuffer*b1.radius
+
+            b2.unitTangent.pos = (b2.pos + b1.pos)/2
+            b2.unitTangent.axis = vector(y, -x, 0)
+            b2.unitTangent.length = lengthBuffer*b2.radius
+
 
 
 #===============================================================================================#
 #                                       Running Functions                                       #
 #===============================================================================================#
-def run3D(checkCollision=True):
+def run3D():
     balls = []
     for _ in range(ballCount):
         ball = generate3DBall()
@@ -185,19 +211,14 @@ def run3D(checkCollision=True):
 
     play = True
 
-    if checkCollision:
-        while(play):
-            rate(fps)
-            step3D(balls)
-            collision3D(balls)
-    else:
-        while(play):
-            rate(fps)
-            step3D(balls)
+    while(play):
+        rate(fps)
+        step3D(balls)
+        collision3D(balls)
 
     return
 
-def run2D(checkCollision=True):
+def run2D():
     balls = []
     for _ in range(ballCount):
         ball = generate2DBall()
@@ -205,15 +226,11 @@ def run2D(checkCollision=True):
 
     play = True
     
-    if checkCollision:
-        while(play):
-            rate(fps)
-            step2D(balls)
-            collision2D(balls)
-    else:
-        while(play):
-            rate(fps)
-            step2D(balls)
+    while(play):
+        rate(fps)
+        step2D(balls)
+        # collision2D(balls)
+        draw2DNormal(balls)
     
     return
 
@@ -233,8 +250,8 @@ side = 10
 thickness = .5
 
 # Ball variables
-ballCount = 30
-ballRadius = .5
+ballCount = 2
+ballRadius = 1
 normalizedVelocity = .5
 
 # Ball setup
@@ -254,4 +271,4 @@ dt = .3
 # Running
 createWalls()
 sleep(1)
-run2D(False)
+run2D()
