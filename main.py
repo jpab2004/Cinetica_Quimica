@@ -59,13 +59,26 @@ def createWalls():
     return
 
 def euclidianDistance(p1, p2):
-    dist = sqrt((p1.pos.x - p2.pos.x)**2 + (p1.pos.y - p2.pos.y)**2 + (p1.pos.z - p2.pos.z)**2)
-    return dist
+    return sqrt((p1.pos.x - p2.pos.x)**2 + (p1.pos.y - p2.pos.y)**2 + (p1.pos.z - p2.pos.z)**2)
+
+def euclidianNorma(r):
+    x, y, z = r.x, r.y, r.z
+    return sqrt(x**2 + y**2 + z**2)
+
+def newVelocity(p1, p2):
+    v1, v2 = p1.v, p2.v
+    m1, m2 = p1.m, p2.m
+    r1, r2 = p1.pos, p2.pos
+
+    v1_ = v1 - ((2*m2) / (m1 + m2)) * (dot(v1 - v2, r1 - r2) / euclidianNorma(r1 - r2)) * (r1 - r2)
+    v2_ = v2 - ((2*m1) / (m2 + m1)) * (dot(v2 - v1, r2 - r1) / euclidianNorma(r2 - r1)) * (r2 - r1)
+
+    return v1_, v2_
 
 def collision(iterator):
-    for b1, b2 in combinations(iterator, 2):
-        if (euclidianDistance(b1, b2) <= b1.radius + b2.radius):
-            print('Collision!')
+    for p1, p2 in combinations(iterator, 2):
+        if (euclidianDistance(p1, p2) <= p1.radius + p2.radius):
+            p1.v, p2.v = newVelocity(p1, p2)
     
     return
 
@@ -89,7 +102,7 @@ def generate3DVelocity():
     
 def generate3DBall():
     if randomPosition:
-        positionBuffer = 3
+        positionBuffer = 8
         position = vector(positionBuffer*uniform(-1, 1), positionBuffer*uniform(-1, 1), positionBuffer*uniform(-1, 1))
     else:
         position = vector(0, 0, 0)
@@ -174,60 +187,44 @@ def step2D(iterator):
 
 def draw2D(iterator):
     lengthBuffer = 2
-    for i, b1 in enumerate(iterator):
-        for b2 in iterator[i+1:]:
-            x = b2.pos.x - b1.pos.x
-            y = b2.pos.y - b1.pos.y
+    for i, p1 in enumerate(iterator):
+        for p2 in iterator[i+1:]:
+            x = p2.pos.x - p1.pos.x
+            y = p2.pos.y - p1.pos.y
 
-            b1.unitNormal.pos = b1.pos
-            b1.unitNormal.axis = vector(x, y, 0)
-            b1.unitNormal.length = lengthBuffer*b1.radius
+            p1.unitNormal.pos = p1.pos
+            p1.unitNormal.axis = vector(x, y, 0)
+            p1.unitNormal.length = lengthBuffer*p1.radius
 
-            b2.unitNormal.pos = b2.pos
-            b2.unitNormal.axis = vector(-x, -y, 0)
-            b2.unitNormal.length = lengthBuffer*b2.radius
+            p2.unitNormal.pos = p2.pos
+            p2.unitNormal.axis = vector(-x, -y, 0)
+            p2.unitNormal.length = lengthBuffer*p2.radius
 
-            b1.unitTangent.pos = (b1.pos + b2.pos)/2
-            b1.unitTangent.axis = vector(-y, x, 0)
-            b1.unitTangent.length = lengthBuffer*b1.radius
+            p1.unitTangent.pos = (p1.pos + p2.pos)/2
+            p1.unitTangent.axis = vector(-y, x, 0)
+            p1.unitTangent.length = lengthBuffer*p1.radius
 
-            b2.unitTangent.pos = (b2.pos + b1.pos)/2
-            b2.unitTangent.axis = vector(y, -x, 0)
-            b2.unitTangent.length = lengthBuffer*b2.radius
+            p2.unitTangent.pos = (p2.pos + p1.pos)/2
+            p2.unitTangent.axis = vector(y, -x, 0)
+            p2.unitTangent.length = lengthBuffer*p2.radius
 
-            b1.unitVelocity.pos = b1.pos
-            b1.unitVelocity.axis = b1.v
-            b1.unitVelocity.length = lengthBuffer*b1.radius
+            p1.unitVelocity.pos = p1.pos
+            p1.unitVelocity.axis = p1.v
+            p1.unitVelocity.length = lengthBuffer*p1.radius
 
-            b2.unitVelocity.pos = b2.pos
-            b2.unitVelocity.axis = b2.v
-            b2.unitVelocity.length = lengthBuffer*b2.radius
+            p2.unitVelocity.pos = p2.pos
+            p2.unitVelocity.axis = p2.v
+            p2.unitVelocity.length = lengthBuffer*p2.radius
 
-            # v1n = dot(b1.v, b1.unitNormal.axis)
-            # v1t = dot(b1.v, b1.unitTangent.axis)
-            # v2n = dot(b2.v, b2.unitNormal.axis)
-            # v2t = dot(b2.v, b2.unitTangent.axis)
+            v1_, v2_ = newVelocity(p1, p2)
 
-            # v1n_ = (v1n * (b1.m - b2.m) + 2 * b2.m * v2n) / (b1.m + b2.m)
-            # v1t_ = v1t
-            # v2n_ = (v2n * (b2.m - b1.m) + 2 * b1.m * v1n) / (b2.m + b1.m)
-            # v2t_ = v2t
+            p1.unitNewVelocity.pos = (p1.pos + p2.pos)/2
+            p1.unitNewVelocity.axis = v1_
+            p1.unitNewVelocity.length = lengthBuffer*p1.radius
 
-            # v1n_ *= b1.unitNormal.axis
-            # v1t_ *= b1.unitTangent.axis
-            # v2n_ *= b2.unitNormal.axis
-            # v2t_ *= b2.unitTangent.axis
-
-            # v1_ = v1n_ + v1t_
-            # v2_ = v2n_ + v2t_
-
-            # b1.unitNewVelocity.pos = (b1.pos + b2.pos)/2
-            # b1.unitNewVelocity.axis = v1_
-            # b1.unitNewVelocity.length = lengthBuffer*b1.radius
-
-            # b2.unitNewVelocity.pos = (b2.pos + b1.pos)/2
-            # b2.unitNewVelocity.axis = v2_
-            # b2.unitNewVelocity.length = lengthBuffer*b2.radius
+            p2.unitNewVelocity.pos = (p2.pos + p1.pos)/2
+            p2.unitNewVelocity.axis = v2_
+            p2.unitNewVelocity.length = lengthBuffer*p2.radius
 
 
 
