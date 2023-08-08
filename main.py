@@ -3,8 +3,9 @@
 #===============================================================================================#
 # Libraries
 from vpython import scene, box, sphere, cylinder, arrow, vector, rate, dot
+from math import cos, sin, radians, sqrt
 from random import random, uniform
-from math import cos, sin, radians
+from itertools import combinations
 from time import sleep
 
 
@@ -55,6 +56,17 @@ def createWalls():
         edgeWF = cylinder(pos=vector(-side, -side, side), axis=vector(0, 1, 0), length=edgeLength, color=edgeColor, radius=edgeRadius)
         edgeEB = cylinder(pos=vector(side, -side, -side), axis=vector(0, 1, 0), length=edgeLength, color=edgeColor, radius=edgeRadius)
         edgeEF = cylinder(pos=vector(side, -side, side), axis=vector(0, 1, 0), length=edgeLength, color=edgeColor, radius=edgeRadius)
+    return
+
+def euclidianDistance(p1, p2):
+    dist = sqrt((p1.pos.x - p2.pos.x)**2 + (p1.pos.y - p2.pos.y)**2 + (p1.pos.z - p2.pos.z)**2)
+    return dist
+
+def collision(iterator):
+    for b1, b2 in combinations(iterator, 2):
+        if (euclidianDistance(b1, b2) < b1.radius + b2.radius):
+            print('Collision!')
+    
     return
 
 
@@ -108,17 +120,6 @@ def step3D(iterator):
 
     return
 
-def collision3D(iterator):
-    for i, b1 in enumerate(iterator):
-        for b2 in iterator[i+1:]:
-            xCol = abs(b1.pos.x - b2.pos.x) < b1.radius + b2.radius
-            yCol = abs(b1.pos.y - b2.pos.y) < b1.radius + b2.radius
-            zCol = abs(b1.pos.z - b2.pos.z) < b1.radius + b2.radius
-            if (xCol and yCol and zCol):
-                print('Collision!')
-    
-    return
-
 
 
 #===============================================================================================#
@@ -170,16 +171,6 @@ def step2D(iterator):
             b.v.y *= -1
     
     return
-
-def collision2D(iterator):
-    for i, b1 in enumerate(iterator):
-        for b2 in iterator[i+1:]:
-            xCol = abs(b1.pos.x - b2.pos.x) < b1.radius + b2.radius
-            yCol = abs(b1.pos.y - b2.pos.y) < b1.radius + b2.radius
-            if (xCol and yCol):
-                print('Collision!')
-                # b1.v = b1.unitNewVelocity.axis
-                # b2.v = b2.unitNewVelocity.axis
 
 def draw2D(iterator):
     lengthBuffer = 2
@@ -254,7 +245,7 @@ def run3D():
     while(play):
         rate(fps)
         step3D(balls)
-        collision3D(balls)
+        collision(balls)
 
     return
 
@@ -270,7 +261,7 @@ def run2D():
         rate(fps)
         step2D(balls)
         draw2D(balls)
-        collision2D(balls)
+        collision(balls)
     
     return
 
