@@ -102,7 +102,6 @@ def generate3DVelocity():
     
 def generate3DBall():
     if randomPosition:
-        positionBuffer = 8
         position = vector(positionBuffer*uniform(-1, 1), positionBuffer*uniform(-1, 1), positionBuffer*uniform(-1, 1))
     else:
         position = vector(0, 0, 0)
@@ -151,7 +150,6 @@ def generate2DVelocity():
 
 def generate2DBall():
     if randomPosition:
-        positionBuffer = 3
         position = vector(positionBuffer*uniform(-1, 1), positionBuffer*uniform(-1, 1), 0)
     else:
         position = vector(0, 0, 0)
@@ -167,11 +165,6 @@ def generate2DBall():
     ball.v = generate2DVelocity()
     ball.m = 2
 
-    ball.unitNormal = arrow(round=True, pos=ball.pos, axis=vector(0, 0, 0), length=0, color=RGB2VEC(252, 152, 3))
-    ball.unitTangent = arrow(round=True, pos=ball.pos, axis=vector(0, 0, 0), length=0, color=RGB2VEC(244, 252, 3))
-    ball.unitVelocity = arrow(round=True, pos=ball.pos, axis=ball.v, length=0, color=RGB2VEC(3, 252, 240))
-    ball.unitNewVelocity = arrow(round=True, pos=ball.pos, axis=ball.v, length=0, color=RGB2VEC(3, 252, 240))
-
     return ball
 
 def step2D(iterator):
@@ -185,47 +178,6 @@ def step2D(iterator):
     
     return
 
-def draw2D(iterator):
-    lengthBuffer = 2
-    for i, p1 in enumerate(iterator):
-        for p2 in iterator[i+1:]:
-            x = p2.pos.x - p1.pos.x
-            y = p2.pos.y - p1.pos.y
-
-            p1.unitNormal.pos = p1.pos
-            p1.unitNormal.axis = vector(x, y, 0)
-            p1.unitNormal.length = lengthBuffer*p1.radius
-
-            p2.unitNormal.pos = p2.pos
-            p2.unitNormal.axis = vector(-x, -y, 0)
-            p2.unitNormal.length = lengthBuffer*p2.radius
-
-            p1.unitTangent.pos = (p1.pos + p2.pos)/2
-            p1.unitTangent.axis = vector(-y, x, 0)
-            p1.unitTangent.length = lengthBuffer*p1.radius
-
-            p2.unitTangent.pos = (p2.pos + p1.pos)/2
-            p2.unitTangent.axis = vector(y, -x, 0)
-            p2.unitTangent.length = lengthBuffer*p2.radius
-
-            p1.unitVelocity.pos = p1.pos
-            p1.unitVelocity.axis = p1.v
-            p1.unitVelocity.length = lengthBuffer*p1.radius
-
-            p2.unitVelocity.pos = p2.pos
-            p2.unitVelocity.axis = p2.v
-            p2.unitVelocity.length = lengthBuffer*p2.radius
-
-            v1_, v2_ = newVelocity(p1, p2)
-
-            p1.unitNewVelocity.pos = (p1.pos + p2.pos)/2
-            p1.unitNewVelocity.axis = v1_
-            p1.unitNewVelocity.length = lengthBuffer*p1.radius
-
-            p2.unitNewVelocity.pos = (p2.pos + p1.pos)/2
-            p2.unitNewVelocity.axis = v2_
-            p2.unitNewVelocity.length = lengthBuffer*p2.radius
-
 
 
 #===============================================================================================#
@@ -236,6 +188,8 @@ def run3D():
     for _ in range(ballCount):
         ball = generate3DBall()
         balls.append(ball)
+
+    sleep(1)
 
     play = True
 
@@ -252,12 +206,13 @@ def run2D():
         ball = generate2DBall()
         balls.append(ball)
 
+    sleep(1)
+
     play = True
     
     while(play):
         rate(fps)
         step2D(balls)
-        draw2D(balls)
         collision(balls)
     
     return
@@ -278,9 +233,10 @@ side = 10
 thickness = .5
 
 # Ball variables
-ballCount = 2
-ballRadius = 1
-normalizedVelocity = .5
+ballCount = 30
+ballRadius = .5
+normalizedVelocity = 1.5
+positionBuffer = 8
 
 # Ball setup
 randomPosition = True
