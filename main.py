@@ -64,7 +64,7 @@ def euclidianDistance(p1, p2):
 
 def collision(iterator):
     for b1, b2 in combinations(iterator, 2):
-        if (euclidianDistance(b1, b2) < b1.radius + b2.radius):
+        if (euclidianDistance(b1, b2) <= b1.radius + b2.radius):
             print('Collision!')
     
     return
