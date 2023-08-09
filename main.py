@@ -2,10 +2,19 @@
 #                                             Setup                                             #
 #===============================================================================================#
 # Libraries
-from vpython import scene, rate, box, sphere, cylinder, vector, button, dot, mag2
+from vpython import scene, rate, box, sphere, cylinder, vector, button, canvas, dot, mag2
 from math import cos, sin, radians, sqrt
 from random import random, uniform
 from itertools import combinations
+
+# Preparing Scene
+scene.delete()
+sceneBuffer = 1
+sceneWidth = 900 * sceneBuffer
+sceneHeight = 900 * sceneBuffer
+scene = canvas(width=sceneHeight, height=sceneHeight, align='left')
+scene.background = vector(0, 0, 0)
+scene.append_to_caption("<div id='fps'/>")
 
 
 
@@ -235,13 +244,6 @@ startSimulationButton = button(pos=scene.caption_anchor, text='Start simulation'
 #===============================================================================================#
 #                                           Simulation                                          #
 #===============================================================================================#
-# Preparing Scene
-sceneBuffer = .8
-scene.width = 1920 * sceneBuffer
-scene.height = 1080 * sceneBuffer
-scene.background = vector(0, 0, 0)
-scene.append_to_caption("<div id='fps'/>")
-
 # Wall variables
 side = 10
 thickness = .5
