@@ -2,7 +2,7 @@
 #                                             Setup                                             #
 #===============================================================================================#
 # Libraries
-from vpython import scene, box, sphere, cylinder, arrow, vector, rate, dot
+from vpython import scene, box, sphere, cylinder, vector, rate, dot, mag2
 from math import cos, sin, radians, sqrt
 from random import random, uniform
 from itertools import combinations
@@ -13,7 +13,11 @@ from time import sleep
 #===============================================================================================#
 #                                        Common Functions                                       #
 #===============================================================================================#
-RGB2VEC = lambda r, g, b: vector(r/255, g/255, b/255)
+#===============================================================================================#
+#                                        Common Functions                                       #
+#===============================================================================================#
+def RGB2VEC(r, g, b): 
+    return vector(r/255, g/255, b/255)
 
 def createWalls():
     if solidWalls:
@@ -63,7 +67,7 @@ def euclidianDistance(p1, p2):
 
 def euclidianNorma(r):
     x, y, z = r.x, r.y, r.z
-    return sqrt(x**2 + y**2 + z**2)
+    return sqrt(x**2 + y**2 + z**2)**2
 
 def newVelocity(p1, p2):
     v1, v2 = p1.v, p2.v
@@ -112,7 +116,7 @@ def generate3DBall():
     else:
         color = vector(.8, .8, .8)
 
-    ball = sphere(pos=position, radius=ballRadius, color=color, make_trail=makeTrails, retain=10)
+    ball = sphere(pos=position, radius=particleRadius, color=color, make_trail=makeTrails, retain=10)
     
     ball.v = generate3DVelocity()
     ball.m = 2
@@ -121,7 +125,7 @@ def generate3DBall():
 
 def step3D(iterator):
     for b in iterator:
-        b.pos += (b.v/b.m)*dt
+        b.pos += b.v*dt
 
         if not (wallCollision > b.pos.x > -wallCollision):
             b.v.x *= -1
@@ -160,7 +164,7 @@ def generate2DBall():
     else:
         color = vector(.8, .8, .8)
 
-    ball = sphere(pos=position, radius=ballRadius, color=color, make_trail=makeTrails, retain=50)
+    ball = sphere(pos=position, radius=particleRadius, color=color, make_trail=makeTrails, retain=50)
     
     ball.v = generate2DVelocity()
     ball.m = 2
@@ -189,8 +193,6 @@ def run3D():
         ball = generate3DBall()
         balls.append(ball)
 
-    sleep(1)
-
     play = True
 
     while(play):
@@ -205,8 +207,6 @@ def run2D():
     for _ in range(ballCount):
         ball = generate2DBall()
         balls.append(ball)
-
-    sleep(1)
 
     play = True
     
@@ -227,20 +227,21 @@ sceneBuffer = .8
 scene.width = 1920 * sceneBuffer
 scene.height = 1080 * sceneBuffer
 scene.background = vector(0, 0, 0)
+scene.append_to_caption("<div id='fps'/>")
 
 # Wall variables
 side = 10
 thickness = .5
 
 # Ball variables
-ballCount = 30
-ballRadius = .5
-normalizedVelocity = 1.5
+ballCount = 50
+particleRadius = 1
+normalizedVelocity = 5
 positionBuffer = 8
 
 # Ball setup
 randomPosition = True
-wallCollision = side - .5*thickness - ballRadius
+wallCollision = side - .5*thickness - particleRadius
 
 # Prettier
 overallPretty = False
@@ -250,9 +251,8 @@ solidWalls = False
 
 # Consts
 fps = 300
-dt = .1
+dt = .03
 
 # Running
 createWalls()
-sleep(1)
-run2D()
+run3D()
