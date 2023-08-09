@@ -2,17 +2,13 @@
 #                                             Setup                                             #
 #===============================================================================================#
 # Libraries
-from vpython import scene, box, sphere, cylinder, vector, rate, dot, mag2
+from vpython import scene, rate, box, sphere, cylinder, vector, button, dot, mag2
 from math import cos, sin, radians, sqrt
 from random import random, uniform
 from itertools import combinations
-from time import sleep
 
 
 
-#===============================================================================================#
-#                                        Common Functions                                       #
-#===============================================================================================#
 #===============================================================================================#
 #                                        Common Functions                                       #
 #===============================================================================================#
@@ -60,22 +56,26 @@ def createWalls():
         edgeWF = cylinder(pos=vector(-side, -side, side), axis=vector(0, 1, 0), length=edgeLength, color=edgeColor, radius=edgeRadius)
         edgeEB = cylinder(pos=vector(side, -side, -side), axis=vector(0, 1, 0), length=edgeLength, color=edgeColor, radius=edgeRadius)
         edgeEF = cylinder(pos=vector(side, -side, side), axis=vector(0, 1, 0), length=edgeLength, color=edgeColor, radius=edgeRadius)
+
+    return
+
+def startSimulation():
+    global globalStart
+    globalStart = True
+    startSimulationButton.disabled = True
+
     return
 
 def euclidianDistance(p1, p2):
     return sqrt((p1.pos.x - p2.pos.x)**2 + (p1.pos.y - p2.pos.y)**2 + (p1.pos.z - p2.pos.z)**2)
-
-def euclidianNorma(r):
-    x, y, z = r.x, r.y, r.z
-    return sqrt(x**2 + y**2 + z**2)**2
 
 def newVelocity(p1, p2):
     v1, v2 = p1.v, p2.v
     m1, m2 = p1.m, p2.m
     r1, r2 = p1.pos, p2.pos
 
-    v1_ = v1 - ((2*m2) / (m1 + m2)) * (dot(v1 - v2, r1 - r2) / euclidianNorma(r1 - r2)) * (r1 - r2)
-    v2_ = v2 - ((2*m1) / (m2 + m1)) * (dot(v2 - v1, r2 - r1) / euclidianNorma(r2 - r1)) * (r2 - r1)
+    v1_ = v1 - ((2*m2) / (m1 + m2)) * (dot(v1 - v2, r1 - r2) / mag2(r1 - r2)) * (r1 - r2)
+    v2_ = v2 - ((2*m1) / (m2 + m1)) * (dot(v2 - v1, r2 - r1) / mag2(r2 - r1)) * (r2 - r1)
 
     return v1_, v2_
 
@@ -104,7 +104,7 @@ def generate3DVelocity():
     else:
         return vector.random()
     
-def generate3DBall():
+def generate3DParticle():
     if randomPosition:
         position = vector(positionBuffer*uniform(-1, 1), positionBuffer*uniform(-1, 1), positionBuffer*uniform(-1, 1))
     else:
@@ -116,12 +116,12 @@ def generate3DBall():
     else:
         color = vector(.8, .8, .8)
 
-    ball = sphere(pos=position, radius=particleRadius, color=color, make_trail=makeTrails, retain=10)
+    particle = sphere(pos=position, radius=particleRadius, color=color, make_trail=makeTrails, retain=10)
     
-    ball.v = generate3DVelocity()
-    ball.m = 2
+    particle.v = generate3DVelocity()
+    particle.m = 2
 
-    return ball
+    return particle
 
 def step3D(iterator):
     for b in iterator:
@@ -152,7 +152,7 @@ def generate2DVelocity():
     else:
         return vector(uniform(-1, 1), uniform(-1, 1), 0)
 
-def generate2DBall():
+def generate2DParticle():
     if randomPosition:
         position = vector(positionBuffer*uniform(-1, 1), positionBuffer*uniform(-1, 1), 0)
     else:
@@ -164,12 +164,12 @@ def generate2DBall():
     else:
         color = vector(.8, .8, .8)
 
-    ball = sphere(pos=position, radius=particleRadius, color=color, make_trail=makeTrails, retain=50)
+    particle = sphere(pos=position, radius=particleRadius, color=color, make_trail=makeTrails, retain=50)
     
-    ball.v = generate2DVelocity()
-    ball.m = 2
+    particle.v = generate2DVelocity()
+    particle.m = 2
 
-    return ball
+    return particle
 
 def step2D(iterator):
     for b in iterator:
@@ -177,8 +177,10 @@ def step2D(iterator):
 
         if not (wallCollision > b.pos.x > -wallCollision):
             b.v.x *= -1
+            b.pos += (b.v/b.m)*dt
         if not (wallCollision > b.pos.y > -wallCollision):
             b.v.y *= -1
+            b.pos += (b.v/b.m)*dt
     
     return
 
@@ -188,34 +190,45 @@ def step2D(iterator):
 #                                       Running Functions                                       #
 #===============================================================================================#
 def run3D():
-    balls = []
-    for _ in range(ballCount):
-        ball = generate3DBall()
-        balls.append(ball)
+    particles = []
+    for _ in range(particleCount):
+        particle = generate3DParticle()
+        particles.append(particle)
 
-    play = True
+    while(not globalStart):
+        rate(15)
+        continue
 
-    while(play):
+    while(globalStart):
         rate(fps)
-        step3D(balls)
-        collision(balls)
+        step3D(particles)
+        collision(particles)
 
     return
 
 def run2D():
-    balls = []
-    for _ in range(ballCount):
-        ball = generate2DBall()
-        balls.append(ball)
+    particles = []
+    for _ in range(particleCount):
+        particle = generate2DParticle()
+        particles.append(particle)
 
-    play = True
-    
-    while(play):
+    while(not globalStart):
+        rate(15)
+        continue
+
+    while(globalStart):
         rate(fps)
-        step2D(balls)
-        collision(balls)
+        step2D(particles)
+        collision(particles)
     
     return
+
+
+
+#===============================================================================================#
+#                                          Controllers                                          #
+#===============================================================================================#
+startSimulationButton = button(pos=scene.caption_anchor, text='Start simulation', bind=startSimulation)
 
 
 
@@ -233,13 +246,13 @@ scene.append_to_caption("<div id='fps'/>")
 side = 10
 thickness = .5
 
-# Ball variables
-ballCount = 50
-particleRadius = 1
+# Particle variables
+particleCount = 50
+particleRadius = .5
 normalizedVelocity = 5
 positionBuffer = 8
 
-# Ball setup
+# Particle setup
 randomPosition = True
 wallCollision = side - .5*thickness - particleRadius
 
@@ -252,7 +265,8 @@ solidWalls = False
 # Consts
 fps = 300
 dt = .03
+globalStart = False
 
 # Running
 createWalls()
-run3D()
+run2D()
