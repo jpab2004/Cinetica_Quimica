@@ -1,5 +1,4 @@
-from itertools import combinations
-from pickle import dump, load
+from pickle import dump, load, HIGHEST_PROTOCOL
 from vpython import vector
 
 def RGB2VEC(r, g, b): 
@@ -130,3 +129,13 @@ elements = {
     117: { 'name': 'Tenessine', 'symbol': 'Ts', 'radii-empirical': float('NaN'), 'radii-calculated': float('NaN'), 'mass': (294), 'color': HEX2VEC('#00CCD5') },
     118: { 'name': 'Oganesson', 'symbol': 'Og', 'radii-empirical': float('NaN'), 'radii-calculated': float('NaN'), 'mass': (294), 'color': HEX2VEC('#00CCD5') }
 }
+
+fileName = 'Assets/elementsHashTable.pickle'
+
+with open(fileName, 'wb') as f:
+    dump(elements, f, protocol=HIGHEST_PROTOCOL)
+
+with open(fileName, 'rb') as f:
+    elements2 = load(f)
+
+print(elements == elements2)
