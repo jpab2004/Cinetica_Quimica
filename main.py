@@ -3,9 +3,11 @@
 #===============================================================================================#
 # Libraries
 from vpython import scene, rate, box, sphere, cylinder, vector, button, canvas, dot, mag2
+from pickle import load, HIGHEST_PROTOCOL
 from math import cos, sin, radians, sqrt
 from random import random, uniform
 from itertools import combinations
+from math import exp, isnan
 
 # Preparing Scene
 scene.delete()
@@ -15,6 +17,11 @@ sceneHeight = 900 * sceneBuffer
 scene = canvas(width=sceneHeight, height=sceneHeight, align='left')
 scene.background = vector(0, 0, 0)
 scene.append_to_caption("<div id='fps'/>")
+
+# Elements
+file = 'Assets/elementsHashTable.pickle'
+with open(file, 'rb') as f:
+    elements = load(f)
 
 
 
@@ -95,6 +102,18 @@ def collision(iterator):
     
     return
 
+def getRadii(e):
+    f = lambda x: exp(x/500) - .7
+
+    if empiricalRadii:
+        radii = elements[e]['radii-empirical']
+    else:
+        radii = elements[e]['radii-calculated']
+
+    if isnan(radii): return f(150)    
+
+    return f(radii)
+
 
 
 #===============================================================================================#
@@ -113,17 +132,14 @@ def generate3DVelocity():
     else:
         return vector.random()
     
-def generate3DParticle():
+def generate3DParticle(e):
     if randomPosition:
         position = vector(positionBuffer*uniform(-1, 1), positionBuffer*uniform(-1, 1), positionBuffer*uniform(-1, 1))
     else:
         position = vector(0, 0, 0)
 
-    if randomColor:
-        colorBuffer = 1.5
-        color = vector(colorBuffer*random(), colorBuffer*random(), colorBuffer*random())
-    else:
-        color = vector(.8, .8, .8)
+    particleRadius = getRadii(e)
+    color = elements[e]['color']
 
     particle = sphere(pos=position, radius=particleRadius, color=color, make_trail=makeTrails, retain=10)
     
@@ -135,6 +151,7 @@ def generate3DParticle():
 def step3D(iterator):
     for b in iterator:
         b.pos += b.v*dt
+        wallCollision = side - .5*thickness - b.radius
 
         if not (wallCollision > b.pos.x > -wallCollision):
             b.v.x *= -1
@@ -161,19 +178,16 @@ def generate2DVelocity():
     else:
         return vector(uniform(-1, 1), uniform(-1, 1), 0)
 
-def generate2DParticle():
+def generate2DParticle(e):
     if randomPosition:
         position = vector(positionBuffer*uniform(-1, 1), positionBuffer*uniform(-1, 1), 0)
     else:
         position = vector(0, 0, 0)
 
-    if randomColor:
-        colorBuffer = 1.5
-        color = vector(colorBuffer*random(), colorBuffer*random(), colorBuffer*random())
-    else:
-        color = vector(.8, .8, .8)
+    particleRadius = getRadii(e)
+    color = elements[e]['color']
 
-    particle = sphere(pos=position, radius=particleRadius, color=color, make_trail=makeTrails, retain=50)
+    particle = sphere(pos=position, radius=particleRadius, color=color, make_trail=makeTrails, retain=10)
     
     particle.v = generate2DVelocity()
     particle.m = 2
@@ -183,6 +197,7 @@ def generate2DParticle():
 def step2D(iterator):
     for b in iterator:
         b.pos += (b.v/b.m)*dt
+        wallCollision = side - .5*thickness - b.radius
 
         if not (wallCollision > b.pos.x > -wallCollision):
             b.v.x *= -1
@@ -200,9 +215,10 @@ def step2D(iterator):
 #===============================================================================================#
 def run3D():
     particles = []
-    for _ in range(particleCount):
-        particle = generate3DParticle()
-        particles.append(particle)
+    for element, count in zip(elementsToSimulate, elementsCount):
+        for _ in range(count):
+            particle = generate3DParticle(element)
+            particles.append(particle)
 
     while(not globalStart):
         rate(15)
@@ -217,9 +233,10 @@ def run3D():
 
 def run2D():
     particles = []
-    for _ in range(particleCount):
-        particle = generate2DParticle()
-        particles.append(particle)
+    for element, count in zip(elementsToSimulate, elementsCount):
+        for _ in range(count):
+            particle = generate2DParticle(element)
+            particles.append(particle)
 
     while(not globalStart):
         rate(15)
@@ -248,27 +265,27 @@ startSimulationButton = button(pos=scene.caption_anchor, text='Start simulation'
 side = 10
 thickness = .5
 
-# Particle variables
-particleCount = 50
-particleRadius = .5
-normalizedVelocity = 5
-positionBuffer = 8
-
-# Particle setup
-randomPosition = True
-wallCollision = side - .5*thickness - particleRadius
-
 # Prettier
 overallPretty = False
-randomColor = False
 makeTrails = False
 solidWalls = False
 
+# Particle variables
+radiiBuff = .01
+normalizedVelocity = 5
+positionBuffer = 8
+randomPosition = True
+empiricalRadii = True
+
+# Elements
+elementsToSimulate = [1, 8]
+elementsCount = [20, 20]
+
 # Consts
-fps = 300
-dt = .03
+fps = 20*sum(elementsCount)
+dt = .01
 globalStart = False
 
 # Running
 createWalls()
-run2D()
+run3D()
