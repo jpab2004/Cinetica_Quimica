@@ -292,9 +292,10 @@ empiricalRadii = True
 # Elements
 elementsToSimulate = [2]
 elementsCount = [20]
+nParticles = sum(elementsCount)
 
 # Consts
-fps = 20*sum(elementsCount)
+fps = 20*nParticles
 dt = .01
 globalStart = False
 
