@@ -2,12 +2,14 @@
 #                                             Setup                                             #
 #===============================================================================================#
 # Libraries
-from vpython import scene, rate, box, sphere, cylinder, vector, button, canvas, dot, mag2
-from pickle import load, HIGHEST_PROTOCOL
-from math import cos, sin, radians, sqrt
-from random import random, uniform
+from vpython import scene, rate
+from vpython import box, sphere, cylinder, vector, button, canvas
+from vpython import dot, mag, mag2, cos, sin, radians, sqrt
+
 from itertools import combinations
 from math import exp, isnan
+from random import uniform
+from pickle import load
 
 # Preparing Scene
 scene.delete()
@@ -149,16 +151,16 @@ def generate3DParticle(e):
     return particle
 
 def step3D(iterator):
-    for b in iterator:
-        b.pos += b.v*dt
-        wallCollision = side - .5*thickness - b.radius
+    for p in iterator:
+        p.pos += p.v*dt
+        wallCollision = side - .5*thickness - p.radius
 
-        if not (wallCollision > b.pos.x > -wallCollision):
-            b.v.x *= -1
-        if not (wallCollision > b.pos.y > -wallCollision):
-            b.v.y *= -1
-        if not (wallCollision > b.pos.z > -wallCollision):
-            b.v.z *= -1
+        if not (wallCollision > p.pos.x > -wallCollision):
+            p.v.x *= -1
+        if not (wallCollision > p.pos.y > -wallCollision):
+            p.v.y *= -1
+        if not (wallCollision > p.pos.z > -wallCollision):
+            p.v.z *= -1
 
     return
 
@@ -195,16 +197,16 @@ def generate2DParticle(e):
     return particle
 
 def step2D(iterator):
-    for b in iterator:
-        b.pos += (b.v/b.m)*dt
-        wallCollision = side - .5*thickness - b.radius
+    for p in iterator:
+        p.pos += (p.v/p.m)*dt
+        wallCollision = side - .5*thickness - p.radius
 
-        if not (wallCollision > b.pos.x > -wallCollision):
-            b.v.x *= -1
-            b.pos += (b.v/b.m)*dt
-        if not (wallCollision > b.pos.y > -wallCollision):
-            b.v.y *= -1
-            b.pos += (b.v/b.m)*dt
+        if not (wallCollision > p.pos.x > -wallCollision):
+            p.v.x *= -1
+            p.pos += (p.v/p.m)*dt
+        if not (wallCollision > p.pos.y > -wallCollision):
+            p.v.y *= -1
+            p.pos += (p.v/p.m)*dt
     
     return
 
@@ -233,6 +235,7 @@ def run3D():
 
 def run2D():
     particles = []
+
     for element, count in zip(elementsToSimulate, elementsCount):
         for _ in range(count):
             particle = generate2DParticle(element)
@@ -246,6 +249,7 @@ def run2D():
         rate(fps)
         step2D(particles)
         collision(particles)
+        drawHist(particles)
     
     return
 
@@ -255,6 +259,14 @@ def run2D():
 #                                          Controllers                                          #
 #===============================================================================================#
 startSimulationButton = button(pos=scene.caption_anchor, text='Start simulation', bind=startSimulation)
+
+
+
+#===============================================================================================#
+#                                        Velocities Graph                                       #
+#===============================================================================================#
+def drawHist(particles):
+    vels = list(map(lambda p: mag(p.v), particles))
 
 
 
@@ -278,8 +290,8 @@ randomPosition = True
 empiricalRadii = True
 
 # Elements
-elementsToSimulate = [1, 8]
-elementsCount = [20, 20]
+elementsToSimulate = [2]
+elementsCount = [20]
 
 # Consts
 fps = 20*sum(elementsCount)
@@ -288,4 +300,4 @@ globalStart = False
 
 # Running
 createWalls()
-run3D()
+run2D()
