@@ -2,12 +2,11 @@
 #                                             Setup                                             #
 #===============================================================================================#
 # Libraries
-from vpython import *
-
 from itertools import combinations
-from math import exp, isnan
 from random import uniform
 from pickle import load
+from math import isnan
+from vpython import *
 
 # Preparing Scene
 scene.delete()
@@ -103,7 +102,7 @@ def collision(iterator):
     return
 
 def getRadii(e):
-    f = lambda x: exp(x/500) - .7
+    f = lambda x: (exp(x/500) - .7) * radiiBuff
 
     if empiricalRadii:
         radii = elements[e]['radii-empirical']
@@ -291,28 +290,29 @@ makeTrails = False
 solidWalls = False
 
 # Particle variables
-radiiBuff = .01
-normalizedVelocity = 5
+radiiBuff = .3
+normalizedVelocity = 10
 positionBuffer = 8
 randomPosition = True
 empiricalRadii = True
 
 # Elements
 elementsToSimulate = [2]
-elementsCount = [100]
+elementsCount = [600]
 nParticles = sum(elementsCount)
 
 # Velocity graph variables
-maxVel = 20
+maxVel = 40
+graphWidth = 800
 dv = 1
-velGraph = graph(title='Particle velocity in the simulation', xtitle='Velocicity (?)', xmax=100,
-                 ymax=nParticles, ytitle='Number of Particles', fast=False, width=800, align='left')
-bars = gvbars(delta=.1, color=color.green, label='Number of particles')
+velGraph = graph(title='Particle velocity in the simulation', xtitle='Velocicity (?)', xmax=maxVel,
+                 ymax=nParticles/4, ytitle='Number of Particles', fast=False, width=800, align='left')
+bars = gvbars(delta=1, color=color.green, label='Number of particles')
 bars.plot(0, 0)
 histData = [(normalizedVelocity, nParticles) if i == normalizedVelocity else (i, 0) for i in range(maxVel)]
 
 # Consts
-fps = 20*nParticles
+fps = 3000#30*nParticles
 dt = .01
 globalStart = False
 
