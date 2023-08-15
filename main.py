@@ -2,9 +2,7 @@
 #                                             Setup                                             #
 #===============================================================================================#
 # Libraries
-from vpython import scene, rate
-from vpython import box, sphere, cylinder, vector, button, canvas
-from vpython import dot, mag, mag2, cos, sin, radians, sqrt
+from vpython import *
 
 from itertools import combinations
 from math import exp, isnan
@@ -265,9 +263,19 @@ startSimulationButton = button(pos=scene.caption_anchor, text='Start simulation'
 #===============================================================================================#
 #                                        Velocities Graph                                       #
 #===============================================================================================#
-def drawHist(particles):
-    vels = list(map(lambda p: mag(p.v), particles))
+def getVelocity(p): return mag(p.v)
+def getHist(v):
+    return int(v/dv)
 
+def drawHist(particles):
+    global histData
+
+    vels = list(map(getVelocity, particles))
+    histData = [[i, 0] for i in range(maxVel)]
+    for i in list(map(getHist, vels)):
+        histData[i][1] += 1
+
+    bars.data = histData
 
 
 #===============================================================================================#
@@ -291,8 +299,17 @@ empiricalRadii = True
 
 # Elements
 elementsToSimulate = [2]
-elementsCount = [20]
+elementsCount = [100]
 nParticles = sum(elementsCount)
+
+# Velocity graph variables
+maxVel = 20
+dv = 1
+velGraph = graph(title='Particle velocity in the simulation', xtitle='Velocicity (?)', xmax=100,
+                 ymax=nParticles, ytitle='Number of Particles', fast=False, width=800, align='left')
+bars = gvbars(delta=.1, color=color.green, label='Number of particles')
+bars.plot(0, 0)
+histData = [(normalizedVelocity, nParticles) if i == normalizedVelocity else (i, 0) for i in range(maxVel)]
 
 # Consts
 fps = 20*nParticles
