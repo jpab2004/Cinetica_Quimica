@@ -264,13 +264,17 @@ def getHist(v):
     return int(v/dv)
 
 def drawHist(particles):
-    global histData
+    global bars
 
     vels = list(map(getVelocity, particles))
-    histData = [[i, 0] for i in range(maxVel)]
+    histData = {}
     for i in list(map(getHist, vels)):
-        histData[i][1] += 1
+        try:
+            histData[i] += 1
+        except:
+            histData[i] = 0
 
+    histData = [[v*dv, histData[v]] if v in histData else [v*dv, 0] for v in range(max(histData))]
     bars.data = histData
 
 
@@ -299,14 +303,14 @@ elementsCount = [600]
 nParticles = sum(elementsCount)
 
 # Velocity graph variables
+dv = 2
 maxVel = 30
 graphWidth = 800
-dv = 1
 velGraph = graph(title='Particle velocity in the simulation', xtitle='Velocicity (?)', xmax=maxVel,
-                 ymax=nParticles/4, ytitle='Number of Particles', fast=False, width=800, align='left')
-bars = gvbars(delta=1, color=color.green, label='Number of particles')
+                 ymax=nParticles/4, ytitle='Number of Particles', fast=False, width=800, align='left', height=300)
+bars = gvbars(delta=dv, color=color.green, label='Number of particles')
 bars.plot(0, 0)
-histData = [(normalizedVelocity, nParticles) if i == normalizedVelocity else (i, 0) for i in range(maxVel)]
+histData = [(normalizedVelocity, nParticles) if i == normalizedVelocity else (i/dv, 0) for i in range(int(maxVel/dv))]
 
 # Consts
 fps = 20*nParticles
@@ -315,4 +319,4 @@ globalStart = False
 
 # Running
 createWalls()
-run3D()
+run2D()
