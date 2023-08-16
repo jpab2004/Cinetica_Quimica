@@ -74,6 +74,79 @@ def createWalls():
 
     return
 
+def generateVelocity(d3=True):
+    if d3:
+        if normalizedVelocity:
+            psi = radians(uniform(0, 360))
+            theta = radians(uniform(0, 360))
+
+            x = normalizedVelocity * cos(theta) * sin(psi)
+            y = normalizedVelocity * sin(theta) * sin(psi)
+            z = normalizedVelocity * cos(psi)
+
+            return vector(x, y, z)
+        else:
+            return vector.random()
+    else:
+        if normalizedVelocity:
+            theta = radians(uniform(0, 360))
+
+            x = normalizedVelocity * cos(theta)
+            y = normalizedVelocity * sin(theta)
+
+            return vector(x, y, 0)
+        else:
+            return vector(uniform(-1, 1), uniform(-1, 1), 0)
+
+def generateParticle(e, d3=True):
+    particleRadius = getRadii(e)
+    color = elements[e]['color']
+    mass = elements[e]['mass']
+
+    if d3:
+        if randomPosition:
+            position = vector(positionBuffer*uniform(-1, 1), positionBuffer*uniform(-1, 1), positionBuffer*uniform(-1, 1))
+        else:
+            position = vector(0, 0, 0)
+        
+        velocity = generateVelocity()
+
+    else:
+        if randomPosition:
+            position = vector(positionBuffer*uniform(-1, 1), positionBuffer*uniform(-1, 1), 0)
+        else:
+            position = vector(0, 0, 0)
+        
+        velocity = generateVelocity(False)
+
+    particle = sphere(pos=position, radius=particleRadius, color=color, make_trail=makeTrails, retain=10)
+    particle.v = velocity
+    particle.m = mass
+    return particle
+
+def getRadii(e):
+    f = lambda x: (exp(x/500) - .7) * radiiBuff
+
+    if empiricalRadii:
+        radii = elements[e]['radii-empirical']
+    else:
+        radii = elements[e]['radii-calculated']
+
+    if isnan(radii): return f(150)    
+
+    return f(radii)
+
+def getMaxRadii():
+    maxRadii = float('-inf')
+
+    if empiricalRadii: radiiChosen = 'radii-empirical'
+    else: radiiChosen = 'radii-calculated'
+
+    for e in elementsToSimulate:
+        if elements[e][radiiChosen] > maxRadii: maxRadii = elements[e][radiiChosen]
+    
+    return maxRadii
+
 def startSimulation():
     global globalStart
     globalStart = True
@@ -98,52 +171,11 @@ def collision(iterator):
     
     return
 
-def getRadii(e):
-    f = lambda x: (exp(x/500) - .7) * radiiBuff
-
-    if empiricalRadii:
-        radii = elements[e]['radii-empirical']
-    else:
-        radii = elements[e]['radii-calculated']
-
-    if isnan(radii): return f(150)    
-
-    return f(radii)
-
 
 
 #===============================================================================================#
 #                                          3D Functions                                         #
 #===============================================================================================#
-def generate3DVelocity():
-    if normalizedVelocity:
-        psi = radians(uniform(0, 360))
-        theta = radians(uniform(0, 360))
-
-        x = normalizedVelocity * cos(theta) * sin(psi)
-        y = normalizedVelocity * sin(theta) * sin(psi)
-        z = normalizedVelocity * cos(psi)
-
-        return vector(x, y, z)
-    else:
-        return vector.random()
-    
-def generate3DParticle(e):
-    if randomPosition:
-        position = vector(positionBuffer*uniform(-1, 1), positionBuffer*uniform(-1, 1), positionBuffer*uniform(-1, 1))
-    else:
-        position = vector(0, 0, 0)
-
-    particleRadius = getRadii(e)
-    color = elements[e]['color']
-
-    particle = sphere(pos=position, radius=particleRadius, color=color, make_trail=makeTrails, retain=10)
-    
-    particle.v = generate3DVelocity()
-    particle.m = 2
-
-    return particle
-
 def step3D(iterator):
     for p in iterator:
         p.pos += p.v*dt
@@ -163,33 +195,6 @@ def step3D(iterator):
 #===============================================================================================#
 #                                          2D Functions                                         #
 #===============================================================================================#
-def generate2DVelocity():
-    if normalizedVelocity:
-        theta = radians(uniform(0, 360))
-
-        x = normalizedVelocity * cos(theta)
-        y = normalizedVelocity * sin(theta)
-
-        return vector(x, y, 0)
-    else:
-        return vector(uniform(-1, 1), uniform(-1, 1), 0)
-
-def generate2DParticle(e):
-    if randomPosition:
-        position = vector(positionBuffer*uniform(-1, 1), positionBuffer*uniform(-1, 1), 0)
-    else:
-        position = vector(0, 0, 0)
-
-    particleRadius = getRadii(e)
-    color = elements[e]['color']
-
-    particle = sphere(pos=position, radius=particleRadius, color=color, make_trail=makeTrails, retain=10)
-    
-    particle.v = generate2DVelocity()
-    particle.m = 2
-
-    return particle
-
 def step2D(iterator):
     for p in iterator:
         p.pos += (p.v/p.m)*dt
@@ -197,23 +202,25 @@ def step2D(iterator):
 
         if not (wallCollision > p.pos.x > -wallCollision):
             p.v.x *= -1
-            p.pos += (p.v/p.m)*dt
         if not (wallCollision > p.pos.y > -wallCollision):
             p.v.y *= -1
-            p.pos += (p.v/p.m)*dt
     
     return
 
 
 
 #===============================================================================================#
-#                                       Running Functions                                       #
+#                                       Running Function                                        #
 #===============================================================================================#
-def run3D():
+def run(d3=True):
+    if d3: runFunction = step3D
+    else: runFunction = step2D
+
     particles = []
+
     for element, count in zip(elementsToSimulate, elementsCount):
         for _ in range(count):
-            particle = generate3DParticle(element)
+            particle = generateParticle(element, d3)
             particles.append(particle)
 
     while(not globalStart):
@@ -222,27 +229,7 @@ def run3D():
 
     while(globalStart):
         rate(fps)
-        step3D(particles)
-        collision(particles)
-        drawHist(particles)
-
-    return
-
-def run2D():
-    particles = []
-
-    for element, count in zip(elementsToSimulate, elementsCount):
-        for _ in range(count):
-            particle = generate2DParticle(element)
-            particles.append(particle)
-
-    while(not globalStart):
-        rate(15)
-        continue
-
-    while(globalStart):
-        rate(fps)
-        step2D(particles)
+        runFunction(particles)
         collision(particles)
         drawHist(particles)
     
@@ -275,7 +262,7 @@ def drawHist(particles):
         except:
             histData[i] = 0
 
-    histData = [[v*dv, histData[v]] if v in histData else [v*dv, 0] for v in range(max(histData))]
+    histData = [[v*dv + .5*dv, histData[v]] if v in histData else [v*dv + .5*dv, 0] for v in range(max(histData))]
     bars.data = histData
 
 
@@ -293,31 +280,32 @@ solidWalls = False
 
 # Particle variables
 radiiBuff = .3
-normalizedVelocity = 10
 positionBuffer = 8
+normalizedVelocity = 10
 randomPosition = True
 empiricalRadii = True
 
 # Elements
 elementsToSimulate = [2]
-elementsCount = [600]
+elementsCount = [30]
 nParticles = sum(elementsCount)
 
 # Velocity graph variables
 dv = 2
-maxVel = 30
+maxVel = 60
 graphWidth = 800
 velGraph = graph(title='Particle velocity in the simulation', xtitle='Velocicity (?)', xmax=maxVel,
-                 ymax=nParticles/4, ytitle='Number of Particles', fast=False, width=800, align='left', height=300)
+                 ymax=nParticles, ytitle='Number of Particles', fast=False, width=800, align='left', height=300)
 bars = gvbars(delta=dv, color=color.green, label='Number of particles')
 bars.plot(0, 0)
-histData = [(normalizedVelocity, nParticles) if v == normalizedVelocity else (v*dv, 0) for v in range(int(maxVel/dv))]
+histData = [(normalizedVelocity, nParticles) if v == normalizedVelocity else (v*dv + .5*dv, 0) for v in range(int(maxVel/dv))]
 
 # Consts
-fps = 20*nParticles
-dt = .01
+dt = .005
+fps = 1000
 globalStart = False
 
 # Running
 createWalls()
-run3D()
+print(getMaxRadii())
+run(False)
