@@ -224,6 +224,7 @@ def run3D():
         rate(fps)
         step3D(particles)
         collision(particles)
+        drawHist(particles)
 
     return
 
@@ -310,7 +311,7 @@ velGraph = graph(title='Particle velocity in the simulation', xtitle='Velocicity
                  ymax=nParticles/4, ytitle='Number of Particles', fast=False, width=800, align='left', height=300)
 bars = gvbars(delta=dv, color=color.green, label='Number of particles')
 bars.plot(0, 0)
-histData = [(normalizedVelocity, nParticles) if i == normalizedVelocity else (i/dv, 0) for i in range(int(maxVel/dv))]
+histData = [(normalizedVelocity, nParticles) if v == normalizedVelocity else (v*dv, 0) for v in range(int(maxVel/dv))]
 
 # Consts
 fps = 20*nParticles
@@ -319,4 +320,4 @@ globalStart = False
 
 # Running
 createWalls()
-run2D()
+run3D()
