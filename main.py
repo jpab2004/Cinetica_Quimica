@@ -81,9 +81,6 @@ def startSimulation():
 
     return
 
-def euclidianDistance(p1, p2):
-    return sqrt((p1.pos.x - p2.pos.x)**2 + (p1.pos.y - p2.pos.y)**2 + (p1.pos.z - p2.pos.z)**2)
-
 def newVelocity(p1, p2):
     v1, v2 = p1.v, p2.v
     m1, m2 = p1.m, p2.m
@@ -96,7 +93,7 @@ def newVelocity(p1, p2):
 
 def collision(iterator):
     for p1, p2 in combinations(iterator, 2):
-        if (euclidianDistance(p1, p2) <= p1.radius + p2.radius):
+        if (mag(p1.pos - p2.pos) <= p1.radius + p2.radius):
             p1.v, p2.v = newVelocity(p1, p2)
     
     return
@@ -302,7 +299,7 @@ elementsCount = [600]
 nParticles = sum(elementsCount)
 
 # Velocity graph variables
-maxVel = 40
+maxVel = 30
 graphWidth = 800
 dv = 1
 velGraph = graph(title='Particle velocity in the simulation', xtitle='Velocicity (?)', xmax=maxVel,
@@ -312,10 +309,10 @@ bars.plot(0, 0)
 histData = [(normalizedVelocity, nParticles) if i == normalizedVelocity else (i, 0) for i in range(maxVel)]
 
 # Consts
-fps = 3000#30*nParticles
+fps = 20*nParticles
 dt = .01
 globalStart = False
 
 # Running
 createWalls()
-run2D()
+run3D()
