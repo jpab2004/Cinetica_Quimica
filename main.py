@@ -74,6 +74,12 @@ def createWalls():
 
     return
 
+def generatePosition(d3=True):
+    if randomPosition:
+        if d3: return positionBuffer*vector.random()
+        else: return vector(positionBuffer*uniform(-1, 1), positionBuffer*uniform(-1, 1), 0)
+    else: return vector(0, 0, 0)
+
 def generateVelocity(d3=True):
     if d3:
         if normalizedVelocity:
@@ -100,28 +106,24 @@ def generateVelocity(d3=True):
 
 def generateParticle(e, d3=True):
     particleRadius = getRadii(e)
-    color = elements[e]['color']
-    mass = elements[e]['mass']
+    particleColor = elements[e]['color']
+    particleMass = elements[e]['mass']
+    particleVelocity = generateVelocity(d3)
 
-    if d3:
-        if randomPosition:
-            position = vector(positionBuffer*uniform(-1, 1), positionBuffer*uniform(-1, 1), positionBuffer*uniform(-1, 1))
-        else:
-            position = vector(0, 0, 0)
-        
-        velocity = generateVelocity()
+    still = True
+    particlePosition = generatePosition(d3)
+    positions = list(map(getPositionAndRadius, particles))
+    while (still):
+        still = False
+        particlePosition = generatePosition(d3)
+        for pos, rad in positions:
+            if (mag(pos - particlePosition)) <= (rad + particleRadius):
+                still = True
+                break
 
-    else:
-        if randomPosition:
-            position = vector(positionBuffer*uniform(-1, 1), positionBuffer*uniform(-1, 1), 0)
-        else:
-            position = vector(0, 0, 0)
-        
-        velocity = generateVelocity(False)
-
-    particle = sphere(pos=position, radius=particleRadius, color=color, make_trail=makeTrails, retain=10)
-    particle.v = velocity
-    particle.m = mass
+    particle = sphere(pos=particlePosition, radius=particleRadius, color=particleColor, make_trail=makeTrails, retain=10)
+    particle.v = particleVelocity
+    particle.m = particleMass
     return particle
 
 def getRadii(e):
@@ -146,6 +148,8 @@ def getMaxRadii():
         if elements[e][radiiChosen] > maxRadii: maxRadii = elements[e][radiiChosen]
     
     return maxRadii
+
+def getPositionAndRadius(p): return (p.pos, p.radius)
 
 def startSimulation():
     global globalStart
@@ -183,10 +187,13 @@ def step3D(iterator):
 
         if not (wallCollision > p.pos.x > -wallCollision):
             p.v.x *= -1
+            p.pos += (p.v/p.m)*dt
         if not (wallCollision > p.pos.y > -wallCollision):
             p.v.y *= -1
+            p.pos += (p.v/p.m)*dt
         if not (wallCollision > p.pos.z > -wallCollision):
             p.v.z *= -1
+            p.pos += (p.v/p.m)*dt
 
     return
 
@@ -202,8 +209,10 @@ def step2D(iterator):
 
         if not (wallCollision > p.pos.x > -wallCollision):
             p.v.x *= -1
+            p.pos += (p.v/p.m)*dt
         if not (wallCollision > p.pos.y > -wallCollision):
             p.v.y *= -1
+            p.pos += (p.v/p.m)*dt
     
     return
 
@@ -215,8 +224,6 @@ def step2D(iterator):
 def run(d3=True):
     if d3: runFunction = step3D
     else: runFunction = step2D
-
-    particles = []
 
     for element, count in zip(elementsToSimulate, elementsCount):
         for _ in range(count):
@@ -279,6 +286,7 @@ makeTrails = False
 solidWalls = False
 
 # Particle variables
+particles = []
 radiiBuff = .3
 positionBuffer = 8
 normalizedVelocity = 10
@@ -286,8 +294,8 @@ randomPosition = True
 empiricalRadii = True
 
 # Elements
-elementsToSimulate = [2]
-elementsCount = [30]
+elementsToSimulate = [1, 2, 55]
+elementsCount = [100, 100, 100]
 nParticles = sum(elementsCount)
 
 # Velocity graph variables
@@ -307,5 +315,4 @@ globalStart = False
 
 # Running
 createWalls()
-print(getMaxRadii())
 run(False)
