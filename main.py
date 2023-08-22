@@ -81,9 +81,9 @@ def generateTheoryCurve(e, nParticlesTheory):
 
     deltaV = 10
     for v in range(0, maxVel+deltaV, deltaV):
-        alpha = (dv/deltaV) * nParticlesTheory
+        alpha = (dv**2/deltaV) * nParticlesTheory
         first = (mass / (2*pi*k*temperature))**1.5
-        second = exp(-.5*mass*v**2 / (k*temperature))*v**2*dv
+        second = exp(-.5*mass*v**2 / (k*temperature))*v**2
 
         value = alpha * first * second
         theory.plot(v, value)
@@ -255,7 +255,7 @@ def run(d3=True):
         runFunction(particles)
         collision(particles)
 
-        if i == loopVerboseCount: drawHist(particles); i = 1
+        if i >= loopVerboseCount: drawHist(particles); i = 1
         i += 1
     
     return
@@ -305,14 +305,14 @@ solidWalls = False
 
 # Particle variables
 particles = []
-radiiBuff = .7
+radiiBuff = .2
 positionBuffer = 8
 randomPosition = True
 empiricalRadii = True
 
 # Elements
 elementsToSimulate = [2]
-elementsCount = [100]
+elementsCount = [600]
 nParticles = sum(elementsCount)
 
 # Velocity graph variables
@@ -324,15 +324,15 @@ velGraph = graph(title='Velocidade das partículas na simulação', xtitle='Velo
                  ytitle='Número de Partículas', fast=False, width=800, align='left', height=300, background=vector(0, 0, 0))
 bars = gvbars(delta=dv, color=color.green, label='Number of particles')
 bars.plot(0, 0)
-loopVerboseCount = 3
+loopVerboseCount = 1
 
 # Consts
 dt = 5e-5
 fps = 1000
 k = 1.380649e-23
-temperature = 1000
+temperature = 300
 globalStart = False
 
 # Running
 createWalls()
-run(True)
+run(False)
