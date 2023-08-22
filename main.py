@@ -74,6 +74,20 @@ def createWalls():
 
     return
 
+def generateTheoryCurve(e, nParticlesTheory):
+    theory = gcurve(color=elements[e]['color'], label=elements[e]['name'])
+    mass = generateMass(e)
+
+
+    deltaV = 10
+    for v in range(0, maxVel+deltaV, deltaV):
+        alpha = (dv/deltaV) * nParticlesTheory
+        first = (mass / (2*pi*k*temperature))**1.5
+        second = exp(-.5*mass*v**2 / (k*temperature))*v**2*dv
+
+        value = alpha * first * second
+        theory.plot(v, value)
+
 def generatePosition(d3=True):
     if randomPosition:
         if d3: return positionBuffer*vector.random()
@@ -99,11 +113,14 @@ def generateVelocity(particleMass, d3=True):
         y = averageKinecticMomentum * sin(theta)
 
         return vector(x, y, 0)
+    
+def generateMass(e):
+    return elements[e]['mass']*1E-3/6e23
 
 def generateParticle(e, d3=True):
     particleRadius = getRadii(e)
+    particleMass = generateMass(e)
     particleColor = elements[e]['color']
-    particleMass = elements[e]['mass']*1E-3/6E23
     particleVelocity = generateVelocity(particleMass, d3)/particleMass
 
     still = True
@@ -222,6 +239,7 @@ def run(d3=True):
     else: runFunction = step2D
 
     for element, count in zip(elementsToSimulate, elementsCount):
+        generateTheoryCurve(element, count)
         for _ in range(count):
             particle = generateParticle(element, d3)
             particles.append(particle)
@@ -230,11 +248,15 @@ def run(d3=True):
         rate(15)
         continue
 
+    i = 1
+
     while(globalStart):
         rate(fps)
         runFunction(particles)
         collision(particles)
-        drawHist(particles)
+
+        if i == loopVerboseCount: drawHist(particles); i = 1
+        i += 1
     
     return
 
@@ -295,13 +317,14 @@ nParticles = sum(elementsCount)
 
 # Velocity graph variables
 dv = 100
-maxVel = 4500
+maxVel = 6000
 graphWidth = 800
+histData = [(v*dv + .5*dv, 0) for v in range(int(maxVel/dv))]
 velGraph = graph(title='Particle velocity in the simulation', xtitle='Velocicity (m/s)', xmax=maxVel,
                  ymax=nParticles/4, ytitle='Number of Particles', fast=False, width=800, align='left', height=300)
 bars = gvbars(delta=dv, color=color.green, label='Number of particles')
 bars.plot(0, 0)
-histData = [(v*dv + .5*dv, 0) for v in range(int(maxVel/dv))]
+loopVerboseCount = 3
 
 # Consts
 dt = 5e-5
