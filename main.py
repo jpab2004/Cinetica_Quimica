@@ -75,7 +75,7 @@ def createWalls():
     return
 
 def generateTheoryCurve(e, nParticlesTheory):
-    theory = gcurve(color=elements[e]['color'], label=elements[e]['name'])
+    theory = gcurve(color=elements[e]['color'], label=elements[e]['name-pt'])
     mass = generateMass(e)
 
 
@@ -305,14 +305,14 @@ solidWalls = False
 
 # Particle variables
 particles = []
-radiiBuff = .2
+radiiBuff = .7
 positionBuffer = 8
 randomPosition = True
 empiricalRadii = True
 
 # Elements
 elementsToSimulate = [2]
-elementsCount = [400]
+elementsCount = [100]
 nParticles = sum(elementsCount)
 
 # Velocity graph variables
@@ -320,8 +320,8 @@ dv = 100
 maxVel = 6000
 graphWidth = 800
 histData = [(v*dv + .5*dv, 0) for v in range(int(maxVel/dv))]
-velGraph = graph(title='Particle velocity in the simulation', xtitle='Velocicity (m/s)', xmax=maxVel,
-                 ymax=nParticles/4, ytitle='Number of Particles', fast=False, width=800, align='left', height=300)
+velGraph = graph(title='Velocidade das partículas na simulação', xtitle='Velocidade (m/s)', xmax=maxVel, ymax=nParticles/4,
+                 ytitle='Número de Partículas', fast=False, width=800, align='left', height=300, background=vector(0, 0, 0))
 bars = gvbars(delta=dv, color=color.green, label='Number of particles')
 bars.plot(0, 0)
 loopVerboseCount = 3
@@ -330,9 +330,9 @@ loopVerboseCount = 3
 dt = 5e-5
 fps = 1000
 k = 1.380649e-23
-temperature = 300
+temperature = 1000
 globalStart = False
 
 # Running
 createWalls()
-run(False)
+run(True)
