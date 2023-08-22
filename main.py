@@ -80,35 +80,31 @@ def generatePosition(d3=True):
         else: return vector(positionBuffer*uniform(-1, 1), positionBuffer*uniform(-1, 1), 0)
     else: return vector(0, 0, 0)
 
-def generateVelocity(d3=True):
+def generateVelocity(particleMass, d3=True):
+    averageKinecticMomentum = sqrt(2*particleMass*1.5*k*temperature)
+
     if d3:
-        if normalizedVelocity:
-            psi = radians(uniform(0, 360))
-            theta = radians(uniform(0, 360))
+        psi = radians(uniform(0, 360))
+        theta = radians(uniform(0, 360))
 
-            x = normalizedVelocity * cos(theta) * sin(psi)
-            y = normalizedVelocity * sin(theta) * sin(psi)
-            z = normalizedVelocity * cos(psi)
+        x = averageKinecticMomentum * cos(theta) * sin(psi)
+        y = averageKinecticMomentum * sin(theta) * sin(psi)
+        z = averageKinecticMomentum * cos(psi)
 
-            return vector(x, y, z)
-        else:
-            return vector.random()
+        return vector(x, y, z)
     else:
-        if normalizedVelocity:
-            theta = radians(uniform(0, 360))
+        theta = radians(uniform(0, 360))
 
-            x = normalizedVelocity * cos(theta)
-            y = normalizedVelocity * sin(theta)
+        x = averageKinecticMomentum * cos(theta)
+        y = averageKinecticMomentum * sin(theta)
 
-            return vector(x, y, 0)
-        else:
-            return vector(uniform(-1, 1), uniform(-1, 1), 0)
+        return vector(x, y, 0)
 
 def generateParticle(e, d3=True):
     particleRadius = getRadii(e)
     particleColor = elements[e]['color']
-    particleMass = elements[e]['mass']
-    particleVelocity = generateVelocity(d3)
+    particleMass = elements[e]['mass']*1E-3/6E23
+    particleVelocity = generateVelocity(particleMass, d3)/particleMass
 
     still = True
     particlePosition = generatePosition(d3)
@@ -187,13 +183,13 @@ def step3D(iterator):
 
         if not (wallCollision > p.pos.x > -wallCollision):
             p.v.x *= -1
-            p.pos += (p.v/p.m)*dt
+            p.pos += p.v*dt
         if not (wallCollision > p.pos.y > -wallCollision):
             p.v.y *= -1
-            p.pos += (p.v/p.m)*dt
+            p.pos += p.v*dt
         if not (wallCollision > p.pos.z > -wallCollision):
             p.v.z *= -1
-            p.pos += (p.v/p.m)*dt
+            p.pos += p.v*dt
 
     return
 
@@ -204,15 +200,15 @@ def step3D(iterator):
 #===============================================================================================#
 def step2D(iterator):
     for p in iterator:
-        p.pos += (p.v/p.m)*dt
+        p.pos += p.v*dt
         wallCollision = side - .5*thickness - p.radius
 
         if not (wallCollision > p.pos.x > -wallCollision):
             p.v.x *= -1
-            p.pos += (p.v/p.m)*dt
+            p.pos += p.v*dt
         if not (wallCollision > p.pos.y > -wallCollision):
             p.v.y *= -1
-            p.pos += (p.v/p.m)*dt
+            p.pos += p.v*dt
     
     return
 
@@ -287,30 +283,31 @@ solidWalls = False
 
 # Particle variables
 particles = []
-radiiBuff = .5
+radiiBuff = .2
 positionBuffer = 8
-normalizedVelocity = 10
 randomPosition = True
 empiricalRadii = True
 
 # Elements
 elementsToSimulate = [2]
-elementsCount = [200]
+elementsCount = [400]
 nParticles = sum(elementsCount)
 
 # Velocity graph variables
-dv = 2
-maxVel = 60
+dv = 100
+maxVel = 4500
 graphWidth = 800
-velGraph = graph(title='Particle velocity in the simulation', xtitle='Velocicity (?)', xmax=maxVel,
-                 ymax=nParticles, ytitle='Number of Particles', fast=False, width=800, align='left', height=300)
+velGraph = graph(title='Particle velocity in the simulation', xtitle='Velocicity (m/s)', xmax=maxVel,
+                 ymax=nParticles/4, ytitle='Number of Particles', fast=False, width=800, align='left', height=300)
 bars = gvbars(delta=dv, color=color.green, label='Number of particles')
 bars.plot(0, 0)
-histData = [(normalizedVelocity, nParticles) if v == normalizedVelocity else (v*dv + .5*dv, 0) for v in range(int(maxVel/dv))]
+histData = [(v*dv + .5*dv, 0) for v in range(int(maxVel/dv))]
 
 # Consts
-dt = .005
+dt = 5e-5
 fps = 1000
+k = 1.380649e-23
+temperature = 300
 globalStart = False
 
 # Running
