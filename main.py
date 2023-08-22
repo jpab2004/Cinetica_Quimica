@@ -287,15 +287,15 @@ solidWalls = False
 
 # Particle variables
 particles = []
-radiiBuff = .3
+radiiBuff = .5
 positionBuffer = 8
 normalizedVelocity = 10
 randomPosition = True
 empiricalRadii = True
 
 # Elements
-elementsToSimulate = [1, 2, 55]
-elementsCount = [100, 100, 100]
+elementsToSimulate = [2]
+elementsCount = [200]
 nParticles = sum(elementsCount)
 
 # Velocity graph variables
