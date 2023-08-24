@@ -183,7 +183,7 @@ def newVelocity(p1, p2):
 
 def collision(iterator):
     for p1, p2 in combinations(iterator, 2):
-        if (mag(p1.pos - p2.pos) <= p1.radius + p2.radius):
+        if (mag(p1.pos - p2.pos) <= p1.radius + p2.radius) and (mag( (p1.pos + p1.v*dt) - (p2.pos + p2.v*dt) ) < mag(p1.pos - p2.pos)):
             p1.v, p2.v = newVelocity(p1, p2)
     
     return
@@ -299,20 +299,20 @@ side = 10
 thickness = .5
 
 # Prettier
-overallPretty = False
+overallPretty = True
 makeTrails = False
 solidWalls = False
 
 # Particle variables
 particles = []
 radiiBuff = .2
-positionBuffer = 8
+positionBuffer = .8*side
 randomPosition = True
 empiricalRadii = True
 
 # Elements
 elementsToSimulate = [2]
-elementsCount = [600]
+elementsCount = [300]
 nParticles = sum(elementsCount)
 
 # Velocity graph variables
@@ -320,15 +320,16 @@ dv = 100
 maxVel = 6000
 graphWidth = 800
 histData = [(v*dv + .5*dv, 0) for v in range(int(maxVel/dv))]
-velGraph = graph(title='Velocidade das partículas na simulação', xtitle='Velocidade (m/s)', xmax=maxVel, ymax=nParticles/4,
-                 ytitle='Número de Partículas', fast=False, width=800, align='left', height=300, background=vector(0, 0, 0))
+velGraph = graph(title='Velocidade das partículas na simulação', xtitle='Velocidade (m/s)', xmax=maxVel,
+                 ymax=nParticles/4, ytitle='Número de Partículas', fast=False, width=800, align='left',
+                 height=300, background=vector(0, 0, 0), foreground=vector(0, 0, 0))
 bars = gvbars(delta=dv, color=color.green, label='Number of particles')
 bars.plot(0, 0)
-loopVerboseCount = 1
+loopVerboseCount = 5
 
 # Consts
-dt = 5e-5
-fps = 1000
+dt = 2.5e-5
+fps = 3000
 k = 1.380649e-23
 temperature = 300
 globalStart = False
