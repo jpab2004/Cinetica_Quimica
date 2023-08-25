@@ -124,7 +124,6 @@ def generateParticle(e, d3=True):
     particleVelocity = generateVelocity(particleMass, d3)/particleMass
 
     still = True
-    particlePosition = generatePosition(d3)
     positions = list(map(getPositionAndRadius, particles))
     while (still):
         still = False
@@ -312,7 +311,7 @@ empiricalRadii = True
 
 # Elements
 elementsToSimulate = [2]
-elementsCount = [300]
+elementsCount = [600]
 nParticles = sum(elementsCount)
 
 # Velocity graph variables
