@@ -22,7 +22,7 @@ from vpython import *
 scene.delete()
 
 # Defining the buffer for the dimensions
-sceneBuffer = .7
+sceneBuffer = 1
 
 # Defining the scene width and height
 sceneWidth = 900 * sceneBuffer
@@ -130,13 +130,49 @@ def generateTheoryCurve(e, nParticlesTheory):
         value = (alpha * first * second) / nParticles
         theory.plot(v, value)
 
-def generatePosition(d3=True):
-    if randomPosition:
-        if d3: return positionBuffer*vector.random()
-        else: return vector(positionBuffer*uniform(-1, 1), positionBuffer*uniform(-1, 1), 0)
-    else: return vector(0, 0, 0)
+    return
+
+def getRadii(e):
+    '''Get the atomic radius of given element.
+
+    Args:
+        e: int, element atomic number.
+    
+    Returns:
+        float, radius of the particle with given element.
+    '''
+    f = lambda x: (exp(x/500) - .7) * radiiBuff
+
+    if empiricalRadii:
+        radii = elements[e]['radii-empirical']
+    else:
+        radii = elements[e]['radii-calculated']
+
+    if isnan(radii): return f(150)    
+
+    return f(radii)
+    
+def generateMass(e):
+    '''Generates a mass for the particle with given element.
+
+    Args:
+        e: int, element atomic number.
+
+    Returns:
+        float, the mass of the particle with given element.
+    '''
+    return elements[e]['mass']*1E-3/6e23
 
 def generateVelocity(particleMass, d3=True):
+    '''Generates a velocity vector for particle initialization.
+
+    Args:
+        particleMass: float, mass of the particle to be initialized;
+        d3: bool, True if the simulation is 3-Dimensional, false else.
+    
+    Returns:
+        VPython vector object, vector with the velocity for the particle.
+    '''
     averageKinecticMomentum = sqrt(2*particleMass*1.5*k*temperature)
 
     if d3:
@@ -155,11 +191,31 @@ def generateVelocity(particleMass, d3=True):
         y = averageKinecticMomentum * sin(theta)
 
         return vector(x, y, 0)
-    
-def generateMass(e):
-    return elements[e]['mass']*1E-3/6e23
+
+def generatePosition(d3=True):
+    '''Generates a postion vector for particle initialization.
+
+    Args:
+        d3: bool, True if the simulation is 3-Dimensional, false else.
+
+    Returns:
+        VPython Vector object, vector with position on the scene.
+    '''
+    if randomPosition:
+        if d3: return positionBuffer*vector.random()
+        else: return vector(positionBuffer*uniform(-1, 1), positionBuffer*uniform(-1, 1), 0)
+    else: return vector(0, 0, 0)
 
 def generateParticle(e, d3=True):
+    '''Generate a particle (VPython Sphere object) for the simulation
+
+    Args:
+        e: int, element atomic number;
+        d3: bool, True if the simulation is 3-Dimensional, false else.
+    
+    Returns:
+        VPython Sphere object, the particle for the simulation.
+    '''
     particleRadius = getRadii(e)
     particleMass = generateMass(e)
     particleColor = elements[e]['color']
@@ -180,32 +236,19 @@ def generateParticle(e, d3=True):
     particle.m = particleMass
     return particle
 
-def getRadii(e):
-    f = lambda x: (exp(x/500) - .7) * radiiBuff
+def getPositionAndRadius(p):
+    '''Get the position and radius of particle.
 
-    if empiricalRadii:
-        radii = elements[e]['radii-empirical']
-    else:
-        radii = elements[e]['radii-calculated']
+    Args:
+        p: VPython sphere object, particle to get position and radius.
 
-    if isnan(radii): return f(150)    
-
-    return f(radii)
-
-def getMaxRadii():
-    maxRadii = float('-inf')
-
-    if empiricalRadii: radiiChosen = 'radii-empirical'
-    else: radiiChosen = 'radii-calculated'
-
-    for e in elementsToSimulate:
-        if elements[e][radiiChosen] > maxRadii: maxRadii = elements[e][radiiChosen]
-    
-    return maxRadii
-
-def getPositionAndRadius(p): return (p.pos, p.radius)
+    Returns:
+        tuple, position and radius of particle.
+    '''
+    return (p.pos, p.radius)
 
 def startSimulation():
+    '''Starts the simulation globaly.'''
     global globalStart
     globalStart = True
     startSimulationButton.disabled = True
@@ -213,6 +256,15 @@ def startSimulation():
     return
 
 def newVelocity(p1, p2):
+    '''Calculates and returns the new velocity for 2 particles colliding.
+
+    Args:
+        p1: VPython Sphere object, particle 1 of the collision;
+        p2: VPython Sphere object, particle 2 of the collision.
+
+    Returns:
+        tuple, particles velocities for p1 and p2 sequentially.
+    '''
     v1, v2 = p1.v, p2.v
     m1, m2 = p1.m, p2.m
     r1, r2 = p1.pos, p2.pos
@@ -220,10 +272,15 @@ def newVelocity(p1, p2):
     v1_ = v1 - ((2*m2) / (m1 + m2)) * (dot(v1 - v2, r1 - r2) / mag2(r1 - r2)) * (r1 - r2)
     v2_ = v2 - ((2*m1) / (m2 + m1)) * (dot(v2 - v1, r2 - r1) / mag2(r2 - r1)) * (r2 - r1)
 
-    return v1_, v2_
+    return (v1_, v2_)
 
-def collision(iterator):
-    for p1, p2 in combinations(iterator, 2):
+def collision(particles):
+    '''Detects and applies collisions for all particles.
+
+    Args:
+        particles: VPython Sphere object iterator, contains all particle objects in the simulation.
+    '''
+    for p1, p2 in combinations(particles, 2):
         if (mag(p1.pos - p2.pos) <= p1.radius + p2.radius) and (mag( (p1.pos + p1.v*dt) - (p2.pos + p2.v*dt) ) < mag(p1.pos - p2.pos)):
             p1.v, p2.v = newVelocity(p1, p2)
     
@@ -234,8 +291,13 @@ def collision(iterator):
 #===============================================================================================#
 #                                          3D Functions                                         #
 #===============================================================================================#
-def step3D(iterator):
-    for p in iterator:
+def step3D(particles):
+    '''Function to calculate next step of the simulation for 3D simulations.
+
+    Args:
+        particles: VPython Sphere object iterator, contains all particle objects in the simulation.
+    '''
+    for p in particles:
         p.pos += p.v*dt
         wallCollision = side - .5*thickness - p.radius
 
@@ -256,8 +318,13 @@ def step3D(iterator):
 #===============================================================================================#
 #                                          2D Functions                                         #
 #===============================================================================================#
-def step2D(iterator):
-    for p in iterator:
+def step2D(particles):
+    '''Function to calculate next step of the simulation for 2D simulations.
+
+    Args:
+        particles: VPython Sphere object iterator, contains all particle objects in the simulation.
+    '''
+    for p in particles:
         p.pos += p.v*dt
         wallCollision = side - .5*thickness - p.radius
 
@@ -276,6 +343,16 @@ def step2D(iterator):
 #                                       Running Function                                        #
 #===============================================================================================#
 def run(d3=True):
+    '''Runs the global manager for the simulation.
+
+    Observation:
+        Creates all particle objects, prepares the initialization of the simulation
+        and runs all necessary functions for the simulation step.
+
+    Args:
+        d3: bool, True if the simulation is 3-Dimensional, false else.
+    '''
+    global globalStart, startSimulationButton
     if d3: runFunction = step3D
     else: runFunction = step2D
 
@@ -285,12 +362,13 @@ def run(d3=True):
             particle = generateParticle(element, d3)
             particles.append(particle)
 
+    startSimulationButton.disabled = False
+
     while(not globalStart):
         rate(15)
         continue
 
     i = 1
-
     while(globalStart):
         rate(fps)
         runFunction(particles)
@@ -306,22 +384,46 @@ def run(d3=True):
 #===============================================================================================#
 #                                          Controllers                                          #
 #===============================================================================================#
-startSimulationButton = button(pos=scene.caption_anchor, text='Start simulation', bind=startSimulation)
+# Creates the button to start the simulation
+startSimulationButton = button(pos=scene.caption_anchor, text='Start simulation', bind=startSimulation, disabled=True)
 
 
 
 #===============================================================================================#
 #                                        Velocities Graph                                       #
 #===============================================================================================#
-def getVelocity(p): return mag(p.v)
+def getVelocity(p):
+    '''Calculates magnitute of velocity of the particle.
+
+    Args:
+        p: VPpython Sphere object, the particle.
+    
+    Returns:
+        float, magnitute of the velocity.
+    '''
+    return mag(p.v)
+
 def getHist(v):
+    '''Calculates the bin for the velocity based on deltaV.
+
+    Args:
+        v: float, velocity to calculate the bin.
+
+    Returns:
+        int, bin index of the velocity.
+    '''
     return int(v/dv)
 
 def drawHist(particles):
+    '''Generates and plots the histogram of velocities of the simulation.
+
+    Args:
+        particles: VPython Sphere object iterator, contains all particle objects in the simulation.
+    '''
     global bars
 
-    vels = list(map(getVelocity, particles))
     histData = {}
+    vels = list(map(getVelocity, particles))
     for i in list(map(getHist, vels)):
         try:
             histData[i] += 1
@@ -331,49 +433,77 @@ def drawHist(particles):
     histData = [[v*dv + .5*dv, histData[v]/nParticles] if v in histData else [v*dv + .5*dv, 0] for v in range(max(histData))]
     bars.data = histData
 
+    return
+
 
 #===============================================================================================#
 #                                           Simulation                                          #
 #===============================================================================================#
 # Wall variables
+# Size of each wall
 side = 10
+# Thickness of each wall
 thickness = .5
 
 # Prettier
+# Makes the simulation have prettier graphics (WIP)
 overallPretty = True
+# Makes particles have trails
 makeTrails = False
 
 # Particle variables
+# Particle list initialization
 particles = []
+# Buffer for the radius size (graphics)
 radiiBuff = .5
+# Buffer for generating the initial position of particles
 positionBuffer = .8*side
+# Bool for defining if particles start randomly scattered or on the center
 randomPosition = True
+# Bool for defining use of empirical radii or calculated radii
 empiricalRadii = True
 
 # Elements
+# List of element to simulate (atomic number)
 elementsToSimulate = [2]
+# The amount of each element to simulate
 elementsCount = [100]
+# Total number of particles
 nParticles = sum(elementsCount)
 
 # Velocity graph variables
+# Delta V for histogram binning 
 dv = 100
+# Max velocity displayed on the graph
 maxVel = 6000
+# Width of the graph on the canvas
 graphWidth = 800
+# Initial histogram data for plotting
 histData = [(v*dv + .5*dv, 0) for v in range(int(maxVel/dv))]
+# Velocities graph creation
 velGraph = graph(title='Velocidade das partículas na simulação', xtitle='Velocidade (m/s)', xmax=maxVel,
                  ymax=1, ytitle='Densidade de Probabilidade', fast=False, width=800, align='left',
                  height=300, background=vector(0, 0, 0), foreground=vector(0, 0, 0))
+# Velocities graph initialization
 bars = gvbars(delta=dv, color=color.green, label='Number of particles')
 bars.plot(0, 0)
+# Amount of loops to update the graph (optimization)
 loopVerboseCount = 5
 
 # Consts
+# Delta Time for steps on the simulation
 dt = 2.5e-5
+# FPS of the simulation (max available fps, can be less)
 fps = 3000
+# Boltzmann Constant for calculations
 k = 1.380649e-23
+# Temperature of the simulation
 temperature = 300
+# Global start variable (global manager)
 globalStart = False
 
 # Running
+# Creating the walls of the simulation
 createWalls(False)
+# Running the simulation
 run(False)
