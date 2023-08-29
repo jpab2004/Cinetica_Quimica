@@ -2,22 +2,43 @@
 #                                             Setup                                             #
 #===============================================================================================#
 # Libraries
+# Library for combinations of particles without repetition
 from itertools import combinations
+
+# Function to generate pseudorandom numbers equally distributed
 from random import uniform
+
+# Function to load element data for the simulation
 from pickle import load
+
+# Function to verify if variable is not numeric
 from math import isnan
+
+# Importing of all VPython tools (graphic library)
 from vpython import *
 
 # Preparing Scene
+# Deleting the pre-initialized scene
 scene.delete()
-sceneBuffer = 1
+
+# Defining the buffer for the dimensions
+sceneBuffer = .7
+
+# Defining the scene width and height
 sceneWidth = 900 * sceneBuffer
 sceneHeight = 900 * sceneBuffer
+
+# Creating the canvas of the simulation
 scene = canvas(width=sceneHeight, height=sceneHeight, align='left')
+
+# Setting the background color
 scene.background = vector(0, 0, 0)
+
+# Appending the processing information to the caption of the simulation
 scene.append_to_caption("<div id='fps'/>")
 
 # Elements
+# Importing the elements data
 file = 'Assets/elementsHashTable.pickle'
 with open(file, 'rb') as f:
     elements = load(f)
@@ -27,10 +48,25 @@ with open(file, 'rb') as f:
 #===============================================================================================#
 #                                        Common Functions                                       #
 #===============================================================================================#
-def RGB2VEC(r, g, b): 
+def RGB2VEC(r, g, b):
+    '''Generates a VPython Vector object from RGB information.
+
+    Args:
+        r: float, red channel for the color;
+        g: float, green channel for the color;
+        b: float, blue channel for the color.
+
+    Returns:
+        VPython Vector, vector representing the color.
+    '''
     return vector(r/255, g/255, b/255)
 
-def createWalls():
+def createWalls(solidWalls):
+    '''Generate the walls of the simulation.
+
+    Args:
+        solidWalls: bool, defines if the walls will be solid or wireframes.
+    '''
     if solidWalls:
         s2 = 2 * side - thickness
         s3 = 2 * side + thickness
@@ -75,6 +111,12 @@ def createWalls():
     return
 
 def generateTheoryCurve(e, nParticlesTheory):
+    '''Generate the theory curve for a given number of particles of specific element.
+
+    Args:
+        e: int, element atomic number;
+        nParticlesTheory: int, number of particles for the specified element.
+    '''
     theory = gcurve(color=elements[e]['color'], label=elements[e]['name-pt'])
     mass = generateMass(e)
 
@@ -85,7 +127,7 @@ def generateTheoryCurve(e, nParticlesTheory):
         first = (mass / (2*pi*k*temperature))**1.5
         second = exp(-.5*mass*v**2 / (k*temperature))*v**2
 
-        value = alpha * first * second
+        value = (alpha * first * second) / nParticles
         theory.plot(v, value)
 
 def generatePosition(d3=True):
@@ -286,7 +328,7 @@ def drawHist(particles):
         except:
             histData[i] = 0
 
-    histData = [[v*dv + .5*dv, histData[v]] if v in histData else [v*dv + .5*dv, 0] for v in range(max(histData))]
+    histData = [[v*dv + .5*dv, histData[v]/nParticles] if v in histData else [v*dv + .5*dv, 0] for v in range(max(histData))]
     bars.data = histData
 
 
@@ -300,18 +342,17 @@ thickness = .5
 # Prettier
 overallPretty = True
 makeTrails = False
-solidWalls = False
 
 # Particle variables
 particles = []
-radiiBuff = .2
+radiiBuff = .5
 positionBuffer = .8*side
 randomPosition = True
 empiricalRadii = True
 
 # Elements
 elementsToSimulate = [2]
-elementsCount = [600]
+elementsCount = [100]
 nParticles = sum(elementsCount)
 
 # Velocity graph variables
@@ -320,7 +361,7 @@ maxVel = 6000
 graphWidth = 800
 histData = [(v*dv + .5*dv, 0) for v in range(int(maxVel/dv))]
 velGraph = graph(title='Velocidade das partículas na simulação', xtitle='Velocidade (m/s)', xmax=maxVel,
-                 ymax=nParticles/4, ytitle='Número de Partículas', fast=False, width=800, align='left',
+                 ymax=1, ytitle='Densidade de Probabilidade', fast=False, width=800, align='left',
                  height=300, background=vector(0, 0, 0), foreground=vector(0, 0, 0))
 bars = gvbars(delta=dv, color=color.green, label='Number of particles')
 bars.plot(0, 0)
@@ -334,5 +375,5 @@ temperature = 300
 globalStart = False
 
 # Running
-createWalls()
+createWalls(False)
 run(False)
