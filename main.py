@@ -485,7 +485,7 @@ velGraph = graph(title='Velocidade das partículas na simulação', xtitle='Velo
                  ymax=1, ytitle='Densidade de Probabilidade', fast=False, width=800, align='left',
                  height=300, background=vector(0, 0, 0), foreground=vector(0, 0, 0))
 # Velocities graph initialization
-bars = gvbars(delta=dv, color=color.green, label='Number of particles')
+bars = gvbars(delta=dv, color=color.green, label='Número de Partículas')
 bars.plot(0, 0)
 # Amount of loops to update the graph (optimization)
 loopVerboseCount = 5
