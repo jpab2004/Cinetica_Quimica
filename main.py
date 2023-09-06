@@ -39,6 +39,15 @@ scene.append_to_caption("<div id='fps'/>")
 
 
 
+# GLOBAL MANAGER
+# Global simulation manager! DON'T CHANGE
+manager = {
+    'i': 1,
+    'j': 1
+}
+
+
+
 # Elements
 # Importing the elements data
 file = 'Assets/elementsHashTable.pickle'
@@ -463,10 +472,10 @@ def run(d3=True):
     Args:
         d3: bool, True if the simulation is 3-Dimensional, false else.
     '''
-    global globalStart, startSimulationButton, particles
+    global globalStart, startSimulationButton, particles, manager
 
-    if d3: runFunction = step3D
-    else: runFunction = step2D
+    if d3: manager['runFunction'] = step3D
+    else: manager['runFunction'] = step2D
 
     for element, count in zip(elementsToSimulate, elementsCount):
         generateTheoryCurve(element, count)
@@ -481,18 +490,17 @@ def run(d3=True):
         continue
 
     while(True):
-        i, j = 1, 1
         while(globalStart):
             while(not paused):
-                if ((globalUpdateNeighbour) and (j >= loopNeighboursCount)): updateNeighboursAllParticles(particles); j = 1
+                if ((globalUpdateNeighbour) and (manager['j'] >= loopNeighboursCount)): updateNeighboursAllParticles(particles); manager['j'] = 1
 
                 rate(fps)
-                runFunction(particles)
+                manager['runFunction'](particles)
                 collision(particles)
 
-                if i >= loopVerboseCount: drawHist(particles); i = 1
-                i += 1
-                j += 1
+                if manager['i'] >= loopVerboseCount: drawHist(particles); manager['i'] = 1
+                manager['i'] = manager['i'] + 1
+                manager['j'] = manager['j'] + 1
         sleep(.1)
     
     return
@@ -504,10 +512,12 @@ def run(d3=True):
 #===============================================================================================#
 def startSimulation():
     '''Starts the simulation globaly.'''
-    global globalStart
+    global globalStart, startSimulationButton, pauseSimulationButton, numberOfStepsSlider
+
     globalStart = True
     startSimulationButton.disabled = True
     pauseSimulationButton.disabled = False
+    numberOfStepsSlider.disabled = True
 
     return
 
@@ -515,10 +525,14 @@ def startSimulation():
 
 def pauseSimulation():
     '''Pauses the simulation globaly.'''
-    global paused
+    global paused, pauseSimulationButton, resumeSimulationButton
+    global stepSimulationButton, numberOfStepsSlider
+    
     paused = True
     pauseSimulationButton.disabled = True
     resumeSimulationButton.disabled = False
+    stepSimulationButton.disabled = False
+    numberOfStepsSlider.disabled = False
 
     return
 
@@ -526,21 +540,68 @@ def pauseSimulation():
 
 def resumeSimulation():
     '''Resumes the simulation globaly.'''
-    global paused
+    global paused, pauseSimulationButton, resumeSimulationButton
+    global stepSimulationButton, numberOfStepsSlider
+
     paused = False
     pauseSimulationButton.disabled = False
     resumeSimulationButton.disabled = True
+    stepSimulationButton.disabled = True
+    numberOfStepsSlider.disabled = True
+
+    return
+
+
+
+def stepSimulation():
+    '''Make 1 step in the simulation globaly.'''
+    global particles, manager
+
+    for _ in range(manager['numberOfSteps']):
+        if ((globalUpdateNeighbour) and (manager['j'] >= loopNeighboursCount)): updateNeighboursAllParticles(particles); manager['j'] = 1
+
+        rate(fps)
+        manager['runFunction'](particles)
+        collision(particles)
+
+        if manager['i'] >= loopVerboseCount: drawHist(particles); manager['i'] = 1
+        manager['i'] = manager['i'] + 1
+        manager['j'] = manager['j'] + 1
+
+    return
+
+
+
+def setNumberOfSteps(s):
+    '''Set the number of steps of the manual simulation.'''
+    global manager, numberOfStepsText
+
+    x = s.value
+    print(x)
+    numberOfStepsText.text = f'Número de passos: {x}'
+    manager['numberOfSteps'] = x
 
     return
 
 
 
 # Creates the button to start the simulation
-startSimulationButton = button(pos=scene.caption_anchor, text='Start simulation', bind=startSimulation, disabled=True)
+startSimulationButton = button(pos=scene.caption_anchor, text='Começar simulação', bind=startSimulation, disabled=True, left=50)
 # Creates the button to pause the simulation
-pauseSimulationButton = button(pos=scene.caption_anchor, text='Pause simulation', bind=pauseSimulation, disabled=True)
+pauseSimulationButton = button(pos=scene.caption_anchor, text='Pausar simulação', bind=pauseSimulation, disabled=True, left=50)
+
+# Appending a break of line to the caption
+scene.append_to_caption("<br>")
+
 # Creates the button to resume the simulation
-resumeSimulationButton = button(pos=scene.caption_anchor, text='Resume simulation', bind=resumeSimulation, disabled=True)
+resumeSimulationButton = button(pos=scene.caption_anchor, text='Resumir simulação', bind=resumeSimulation, disabled=True, left=50)
+# Creates the button to make 1 step in the simulation
+stepSimulationButton = button(pos=scene.caption_anchor, text='Rodar passos', bind=stepSimulation, disabled=True, left=50)
+
+# Creates the slider to change the number of manual steps
+numberOfStepsSlider = slider(min=1, max=100, value=20, step=1, length=220, bind=setNumberOfSteps, disabled=True, left=20)
+numberOfStepsText = wtext(text=f'Número de passos: {numberOfStepsSlider.value}')
+manager['numberOfSteps'] = numberOfStepsSlider.value
 
 
 
@@ -575,7 +636,7 @@ randomPosition = True
 # Bool for defining use of empirical radii or calculated radii
 empiricalRadii = True
 # Amount of loops to update the list of neighbours of each particle
-loopNeighboursCount = 50
+loopNeighboursCount = 75
 
 
 
@@ -614,7 +675,7 @@ loopVerboseCount = 5
 # Delta Time for steps on the simulation
 dt = 5e-6
 # FPS of the simulation (max available fps, can be less)
-fps = 3000
+fps = 5000
 # Boltzmann Constant for calculations
 k = 1.380649e-23
 # Temperature of the simulation
@@ -624,6 +685,7 @@ globalStart = False
 # Global pause variable (global manager)
 paused = False
 # Define if neightbours are update together or separetly (global manager)
+# DO NOT CHANGE!!! NOT IMPLEMENTED CORRECTLY! WILL MAKE SIMULATION RUN SLOWER (MUCH SLOWER)!
 globalUpdateNeighbour = True
 
 
