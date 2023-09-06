@@ -17,31 +17,106 @@ from math import isnan
 # Importing of all VPython tools (graphic library)
 from vpython import *
 
+
+
 # Preparing Scene
 # Deleting the pre-initialized scene
 scene.delete()
-
 # Defining the buffer for the dimensions
 sceneBuffer = 1
-
 # Defining the scene width and height
 sceneWidth = 900 * sceneBuffer
 sceneHeight = 900 * sceneBuffer
-
 # Creating the canvas of the simulation
 scene = canvas(width=sceneHeight, height=sceneHeight, align='left')
-
 # Setting the background color
 scene.background = vector(0, 0, 0)
-
 # Appending the processing information to the caption of the simulation
 scene.append_to_caption("<div id='fps'/>")
+
+
 
 # Elements
 # Importing the elements data
 file = 'Assets/elementsHashTable.pickle'
 with open(file, 'rb') as f:
     elements = load(f)
+
+
+
+#===============================================================================================#
+#                                        Velocities Graph                                       #
+#===============================================================================================#
+def generateTheoryCurve(e, nParticlesTheory):
+    '''Generate the theory curve for a given number of particles of specific element.
+
+    Args:
+        e: int, element atomic number;
+        nParticlesTheory: int, number of particles for the specified element.
+    '''
+    theory = gcurve(color=elements[e]['color'], label=elements[e]['name-pt'])
+    mass = generateMass(e)
+
+
+    deltaV = 10
+    for v in range(0, maxVel+deltaV, deltaV):
+        alpha = (dv**2/deltaV) * nParticlesTheory
+        first = (mass / (2*pi*k*temperature))**1.5
+        second = exp(-.5*mass*v**2 / (k*temperature))*v**2
+
+        value = (alpha * first * second) / nParticles
+        theory.plot(v, value)
+
+    return
+
+
+
+def getVelocity(p):
+    '''Calculates magnitute of velocity of the particle.
+
+    Args:
+        p: VPpython Sphere object, the particle.
+    
+    Returns:
+        float, magnitute of the velocity.
+    '''
+    return mag(p.v)
+
+
+
+def getHist(v):
+    '''Calculates the bin for the velocity based on deltaV.
+
+    Args:
+        v: float, velocity to calculate the bin.
+
+    Returns:
+        int, bin index of the velocity.
+    '''
+    return int(v/dv)
+
+
+
+def drawHist(particles):
+    '''Generates and plots the histogram of velocities of the simulation.
+
+    Args:
+        particles: VPython Sphere object iterator, contains all particle objects in the simulation.
+    '''
+    global bars
+
+    histData = {}
+    vels = list(map(getVelocity, particles))
+    for i in list(map(getHist, vels)):
+        try:
+            histData[i] += 1
+        except:
+            histData[i] = 0
+
+    histData = [[v*dv + .5*dv, histData[v]/nParticles] if v in histData else [v*dv + .5*dv, 0] for v in range(max(histData))]
+    bars.data = histData
+
+    return
 
 
 
@@ -60,6 +135,8 @@ def RGB2VEC(r, g, b):
         VPython Vector, vector representing the color.
     '''
     return vector(r/255, g/255, b/255)
+
+
 
 def createWalls(solidWalls):
     '''Generate the walls of the simulation.
@@ -110,27 +187,7 @@ def createWalls(solidWalls):
 
     return
 
-def generateTheoryCurve(e, nParticlesTheory):
-    '''Generate the theory curve for a given number of particles of specific element.
 
-    Args:
-        e: int, element atomic number;
-        nParticlesTheory: int, number of particles for the specified element.
-    '''
-    theory = gcurve(color=elements[e]['color'], label=elements[e]['name-pt'])
-    mass = generateMass(e)
-
-
-    deltaV = 10
-    for v in range(0, maxVel+deltaV, deltaV):
-        alpha = (dv**2/deltaV) * nParticlesTheory
-        first = (mass / (2*pi*k*temperature))**1.5
-        second = exp(-.5*mass*v**2 / (k*temperature))*v**2
-
-        value = (alpha * first * second) / nParticles
-        theory.plot(v, value)
-
-    return
 
 def getRadii(e):
     '''Get the atomic radius of given element.
@@ -151,7 +208,9 @@ def getRadii(e):
     if isnan(radii): return f(150)    
 
     return f(radii)
-    
+
+
+
 def generateMass(e):
     '''Generates a mass for the particle with given element.
 
@@ -162,6 +221,8 @@ def generateMass(e):
         float, the mass of the particle with given element.
     '''
     return elements[e]['mass']*1E-3/6e23
+
+
 
 def generateVelocity(particleMass, d3=True):
     '''Generates a velocity vector for particle initialization.
@@ -192,6 +253,8 @@ def generateVelocity(particleMass, d3=True):
 
         return vector(x, y, 0)
 
+
+
 def generatePosition(d3=True):
     '''Generates a postion vector for particle initialization.
 
@@ -205,6 +268,8 @@ def generatePosition(d3=True):
         if d3: return positionBuffer*vector.random()
         else: return vector(positionBuffer*uniform(-1, 1), positionBuffer*uniform(-1, 1), 0)
     else: return vector(0, 0, 0)
+
+
 
 def generateParticle(e, d3=True):
     '''Generate a particle (VPython Sphere object) for the simulation
@@ -236,6 +301,8 @@ def generateParticle(e, d3=True):
     particle.m = particleMass
     return particle
 
+
+
 def getPositionAndRadius(p):
     '''Get the position and radius of particle.
 
@@ -247,6 +314,8 @@ def getPositionAndRadius(p):
     '''
     return (p.pos, p.radius)
 
+
+
 def startSimulation():
     '''Starts the simulation globaly.'''
     global globalStart
@@ -254,6 +323,8 @@ def startSimulation():
     startSimulationButton.disabled = True
 
     return
+
+
 
 def newVelocity(p1, p2):
     '''Calculates and returns the new velocity for 2 particles colliding.
@@ -273,6 +344,8 @@ def newVelocity(p1, p2):
     v2_ = v2 - ((2*m1) / (m2 + m1)) * (dot(v2 - v1, r2 - r1) / mag2(r2 - r1)) * (r2 - r1)
 
     return (v1_, v2_)
+
+
 
 def collision(particles):
     '''Detects and applies collisions for all particles.
@@ -368,14 +441,16 @@ def run(d3=True):
         rate(15)
         continue
 
-    i = 1
+    i, j = 1, 1
     while(globalStart):
         rate(fps)
         runFunction(particles)
         collision(particles)
 
         if i >= loopVerboseCount: drawHist(particles); i = 1
+        if j >= loopNeighboursCount: print('A'); j = 1
         i += 1
+        j += 1
     
     return
 
@@ -390,53 +465,6 @@ startSimulationButton = button(pos=scene.caption_anchor, text='Start simulation'
 
 
 #===============================================================================================#
-#                                        Velocities Graph                                       #
-#===============================================================================================#
-def getVelocity(p):
-    '''Calculates magnitute of velocity of the particle.
-
-    Args:
-        p: VPpython Sphere object, the particle.
-    
-    Returns:
-        float, magnitute of the velocity.
-    '''
-    return mag(p.v)
-
-def getHist(v):
-    '''Calculates the bin for the velocity based on deltaV.
-
-    Args:
-        v: float, velocity to calculate the bin.
-
-    Returns:
-        int, bin index of the velocity.
-    '''
-    return int(v/dv)
-
-def drawHist(particles):
-    '''Generates and plots the histogram of velocities of the simulation.
-
-    Args:
-        particles: VPython Sphere object iterator, contains all particle objects in the simulation.
-    '''
-    global bars
-
-    histData = {}
-    vels = list(map(getVelocity, particles))
-    for i in list(map(getHist, vels)):
-        try:
-            histData[i] += 1
-        except:
-            histData[i] = 0
-
-    histData = [[v*dv + .5*dv, histData[v]/nParticles] if v in histData else [v*dv + .5*dv, 0] for v in range(max(histData))]
-    bars.data = histData
-
-    return
-
-
-#===============================================================================================#
 #                                           Simulation                                          #
 #===============================================================================================#
 # Wall variables
@@ -445,11 +473,15 @@ side = 10
 # Thickness of each wall
 thickness = .5
 
+
+
 # Prettier
 # Makes the simulation have prettier graphics (WIP)
 overallPretty = True
 # Makes particles have trails
 makeTrails = False
+
+
 
 # Particle variables
 # Particle list initialization
@@ -462,6 +494,10 @@ positionBuffer = .8*side
 randomPosition = True
 # Bool for defining use of empirical radii or calculated radii
 empiricalRadii = True
+# Amount of loops to update the list of neighbours of each particle
+loopNeighboursCount = 20
+
+
 
 # Elements
 # List of element to simulate (atomic number)
@@ -470,6 +506,8 @@ elementsToSimulate = [2]
 elementsCount = [100]
 # Total number of particles
 nParticles = sum(elementsCount)
+
+
 
 # Velocity graph variables
 # Delta V for histogram binning 
@@ -490,6 +528,8 @@ bars.plot(0, 0)
 # Amount of loops to update the graph (optimization)
 loopVerboseCount = 5
 
+
+
 # Consts
 # Delta Time for steps on the simulation
 dt = 2.5e-5
@@ -501,6 +541,8 @@ k = 1.380649e-23
 temperature = 300
 # Global start variable (global manager)
 globalStart = False
+
+
 
 # Running
 # Creating the walls of the simulation
