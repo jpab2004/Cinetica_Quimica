@@ -14,11 +14,11 @@ from pickle import load
 # Function to verify if variable is not numeric
 from math import isnan
 
-# Importing of all VPython tools (graphic library)
-from vpython import *
-
 # Functoin to pause script for time
 from time import sleep
+
+# Importing of all VPython tools (graphic library)
+from vpython import *
 
 
 
@@ -258,6 +258,19 @@ def generateVelocity(particleMass, d3=True):
 
 
 
+def getPositionAndRadius(p):
+    '''Get the position and radius of particle.
+
+    Args:
+        p: VPython sphere object, particle to get position and radius.
+
+    Returns:
+        tuple, position and radius of particle.
+    '''
+    return (p.pos, p.radius)
+
+
+
 def generatePosition(d3=True):
     '''Generates a postion vector for particle initialization.
 
@@ -302,53 +315,8 @@ def generateParticle(e, d3=True):
     particle = sphere(pos=particlePosition, radius=particleRadius, color=particleColor, make_trail=makeTrails, retain=10)
     particle.v = particleVelocity
     particle.m = particleMass
+    particle.neighbours = []
     return particle
-
-
-
-def getPositionAndRadius(p):
-    '''Get the position and radius of particle.
-
-    Args:
-        p: VPython sphere object, particle to get position and radius.
-
-    Returns:
-        tuple, position and radius of particle.
-    '''
-    return (p.pos, p.radius)
-
-
-
-def startSimulation():
-    '''Starts the simulation globaly.'''
-    global globalStart
-    globalStart = True
-    startSimulationButton.disabled = True
-    pauseSimulationButton.disabled = False
-
-    return
-
-
-
-def pauseSimulation():
-    '''Pauses the simulation globaly.'''
-    global paused
-    paused = True
-    pauseSimulationButton.disabled = True
-    resumeSimulationButton.disabled = False
-
-    return
-
-
-
-def resumeSimulation():
-    '''Resumes the simulation globaly.'''
-    global paused
-    paused = False
-    pauseSimulationButton.disabled = False
-    resumeSimulationButton.disabled = True
-
-    return
 
 
 
@@ -379,9 +347,10 @@ def collision(particles):
     Args:
         particles: VPython Sphere object iterator, contains all particle objects in the simulation.
     '''
-    for p1, p2 in combinations(particles, 2):
-        if (mag(p1.pos - p2.pos) <= p1.radius + p2.radius) and (mag( (p1.pos + p1.v*dt) - (p2.pos + p2.v*dt) ) < mag(p1.pos - p2.pos)):
-            p1.v, p2.v = newVelocity(p1, p2)
+    for p1 in particles:
+        for p2 in p1.neighbours:
+            if (mag(p1.pos - p2.pos) <= p1.radius + p2.radius) and (mag( (p1.pos + p1.v*dt) - (p2.pos + p2.v*dt) ) < mag(p1.pos - p2.pos)):
+                p1.v, p2.v = newVelocity(p1, p2)
     
     return
 
@@ -393,7 +362,13 @@ def updateNeighbours(particles):
     Args:
         particles: VPython Sphere object iterator, contains all particle objects in the simulation.
     '''
-    pass
+    [setattr(p, 'neighbours', []) for p in particles]
+    for p1, p2 in combinations(particles, 2):   
+        if (mag(p1.pos - p2.pos) <= 2*dt*loopNeighboursCount*max(mag(p1.v), mag(p2.v))):
+            p1.neighbours.append(p2)
+            p2.neighbours.append(p1)
+
+    return
 
 
 
@@ -482,12 +457,13 @@ def run(d3=True):
         i, j = 1, 1
         while(globalStart):
             while(not paused):
+                if j >= loopNeighboursCount: updateNeighbours(particles); j = 1
+
                 rate(fps)
                 runFunction(particles)
                 collision(particles)
 
                 if i >= loopVerboseCount: drawHist(particles); i = 1
-                if j >= loopNeighboursCount: updateNeighbours(particles); j = 1
                 i += 1
                 j += 1
         sleep(.1)
@@ -499,6 +475,39 @@ def run(d3=True):
 #===============================================================================================#
 #                                          Controllers                                          #
 #===============================================================================================#
+def startSimulation():
+    '''Starts the simulation globaly.'''
+    global globalStart
+    globalStart = True
+    startSimulationButton.disabled = True
+    pauseSimulationButton.disabled = False
+
+    return
+
+
+
+def pauseSimulation():
+    '''Pauses the simulation globaly.'''
+    global paused
+    paused = True
+    pauseSimulationButton.disabled = True
+    resumeSimulationButton.disabled = False
+
+    return
+
+
+
+def resumeSimulation():
+    '''Resumes the simulation globaly.'''
+    global paused
+    paused = False
+    pauseSimulationButton.disabled = False
+    resumeSimulationButton.disabled = True
+
+    return
+
+
+
 # Creates the button to start the simulation
 startSimulationButton = button(pos=scene.caption_anchor, text='Start simulation', bind=startSimulation, disabled=True)
 # Creates the button to pause the simulation
@@ -531,7 +540,7 @@ makeTrails = False
 # Particle list initialization
 particles = []
 # Buffer for the radius size (graphics)
-radiiBuff = .5
+radiiBuff = .15
 # Buffer for generating the initial position of particles
 positionBuffer = .8*side
 # Bool for defining if particles start randomly scattered or on the center
@@ -547,7 +556,7 @@ loopNeighboursCount = 50
 # List of element to simulate (atomic number)
 elementsToSimulate = [2]
 # The amount of each element to simulate
-elementsCount = [100]
+elementsCount = [600]
 # Total number of particles
 nParticles = sum(elementsCount)
 
@@ -576,7 +585,7 @@ loopVerboseCount = 5
 
 # Consts
 # Delta Time for steps on the simulation
-dt = 2.5e-5
+dt = 5e-6
 # FPS of the simulation (max available fps, can be less)
 fps = 3000
 # Boltzmann Constant for calculations
