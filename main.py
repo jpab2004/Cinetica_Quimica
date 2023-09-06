@@ -418,7 +418,7 @@ def step3D(particles):
             p.v.z *= -1
             p.pos += p.v*dt
 
-        if ((not globalUpdateNeighbour) and (mag(p.neighbourShell - p.lastUpdatePos) <= mag(p.pos))): updateNeighbours(p, particles); print('a')
+        if ((not globalUpdateNeighbour) and (mag(p.neighbourShell - p.lastUpdatePos) - mag(p.pos - p.lastUpdatePos) <= 0 )): updateNeighbours(p, particles)
 
     return
 
@@ -632,4 +632,4 @@ globalUpdateNeighbour = True
 # Creating the walls of the simulation
 createWalls(False)
 # Running the simulation
-run(False)
+run(True)
