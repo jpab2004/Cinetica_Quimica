@@ -315,7 +315,11 @@ def generateParticle(e, d3=True):
     particle = sphere(pos=particlePosition, radius=particleRadius, color=particleColor, make_trail=makeTrails, retain=10)
     particle.v = particleVelocity
     particle.m = particleMass
+
     particle.neighbours = []
+    particle.neighbourShell = 2*dt*loopNeighboursCount*particle.v
+    particle.lastUpdatePos = particle.pos
+
     return particle
 
 
@@ -356,7 +360,26 @@ def collision(particles):
 
 
 
-def updateNeighbours(particles):
+def updateNeighbours(p1, particles):
+    '''Updates the neighbours of 1 particle.
+    
+    Args:
+        p1: VPython Sphere object, particle to update
+        particles: VPython Sphere object iterator, contains all particle objects in the simulation.
+    '''
+    setattr(p1, 'neighbours', [])
+    p1.neighbourShell = 2.2*dt*loopNeighboursCount*p1.v
+    p1.lastUpdatePos = p1.pos
+    for p2 in particles:
+        if p1 == p2:continue
+        if (mag(p1.pos - p2.pos) <= 2.2*dt*loopNeighboursCount*max(mag(p1.v), mag(p2.v))):
+            p1.neighbours.append(p2)
+    
+    return
+
+
+
+def updateNeighboursAllParticles(particles):
     '''Updates the neighbours of each particles.
     
     Args:
@@ -364,7 +387,7 @@ def updateNeighbours(particles):
     '''
     [setattr(p, 'neighbours', []) for p in particles]
     for p1, p2 in combinations(particles, 2):   
-        if (mag(p1.pos - p2.pos) <= 2*dt*loopNeighboursCount*max(mag(p1.v), mag(p2.v))):
+        if (mag(p1.pos - p2.pos) <= 2.2*dt*loopNeighboursCount*max(mag(p1.v), mag(p2.v))):
             p1.neighbours.append(p2)
             p2.neighbours.append(p1)
 
@@ -395,6 +418,8 @@ def step3D(particles):
             p.v.z *= -1
             p.pos += p.v*dt
 
+        if ((not globalUpdateNeighbour) and (mag(p.neighbourShell - p.lastUpdatePos) <= mag(p.pos))): updateNeighbours(p, particles); print('a')
+
     return
 
 
@@ -418,6 +443,8 @@ def step2D(particles):
         if not (wallCollision > p.pos.y > -wallCollision):
             p.v.y *= -1
             p.pos += p.v*dt
+
+        if ((not globalUpdateNeighbour) and (mag(p.neighbourShell - p.lastUpdatePos) - mag(p.pos - p.lastUpdatePos) <= 0 )): updateNeighbours(p, particles)
     
     return
 
@@ -457,7 +484,7 @@ def run(d3=True):
         i, j = 1, 1
         while(globalStart):
             while(not paused):
-                if j >= loopNeighboursCount: updateNeighbours(particles); j = 1
+                if ((globalUpdateNeighbour) and (j >= loopNeighboursCount)): updateNeighboursAllParticles(particles); j = 1
 
                 rate(fps)
                 runFunction(particles)
@@ -596,6 +623,8 @@ temperature = 300
 globalStart = False
 # Global pause variable (global manager)
 paused = False
+# Define if neightbours are update together or separetly (global manager)
+globalUpdateNeighbour = True
 
 
 
