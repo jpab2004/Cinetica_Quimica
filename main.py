@@ -17,6 +17,9 @@ from math import isnan
 # Importing of all VPython tools (graphic library)
 from vpython import *
 
+# Functoin to pause script for time
+from time import sleep
+
 
 
 # Preparing Scene
@@ -321,6 +324,29 @@ def startSimulation():
     global globalStart
     globalStart = True
     startSimulationButton.disabled = True
+    pauseSimulationButton.disabled = False
+
+    return
+
+
+
+def pauseSimulation():
+    '''Pauses the simulation globaly.'''
+    global paused
+    paused = True
+    pauseSimulationButton.disabled = True
+    resumeSimulationButton.disabled = False
+
+    return
+
+
+
+def resumeSimulation():
+    '''Resumes the simulation globaly.'''
+    global paused
+    paused = False
+    pauseSimulationButton.disabled = False
+    resumeSimulationButton.disabled = True
 
     return
 
@@ -358,6 +384,16 @@ def collision(particles):
             p1.v, p2.v = newVelocity(p1, p2)
     
     return
+
+
+
+def updateNeighbours(particles):
+    '''Updates the neighbours of each particles.
+    
+    Args:
+        particles: VPython Sphere object iterator, contains all particle objects in the simulation.
+    '''
+    pass
 
 
 
@@ -425,7 +461,8 @@ def run(d3=True):
     Args:
         d3: bool, True if the simulation is 3-Dimensional, false else.
     '''
-    global globalStart, startSimulationButton
+    global globalStart, startSimulationButton, particles
+
     if d3: runFunction = step3D
     else: runFunction = step2D
 
@@ -441,16 +478,19 @@ def run(d3=True):
         rate(15)
         continue
 
-    i, j = 1, 1
-    while(globalStart):
-        rate(fps)
-        runFunction(particles)
-        collision(particles)
+    while(True):
+        i, j = 1, 1
+        while(globalStart):
+            while(not paused):
+                rate(fps)
+                runFunction(particles)
+                collision(particles)
 
-        if i >= loopVerboseCount: drawHist(particles); i = 1
-        if j >= loopNeighboursCount: print('A'); j = 1
-        i += 1
-        j += 1
+                if i >= loopVerboseCount: drawHist(particles); i = 1
+                if j >= loopNeighboursCount: updateNeighbours(particles); j = 1
+                i += 1
+                j += 1
+        sleep(.1)
     
     return
 
@@ -461,6 +501,10 @@ def run(d3=True):
 #===============================================================================================#
 # Creates the button to start the simulation
 startSimulationButton = button(pos=scene.caption_anchor, text='Start simulation', bind=startSimulation, disabled=True)
+# Creates the button to pause the simulation
+pauseSimulationButton = button(pos=scene.caption_anchor, text='Pause simulation', bind=pauseSimulation, disabled=True)
+# Creates the button to resume the simulation
+resumeSimulationButton = button(pos=scene.caption_anchor, text='Resume simulation', bind=resumeSimulation, disabled=True)
 
 
 
@@ -495,7 +539,7 @@ randomPosition = True
 # Bool for defining use of empirical radii or calculated radii
 empiricalRadii = True
 # Amount of loops to update the list of neighbours of each particle
-loopNeighboursCount = 20
+loopNeighboursCount = 50
 
 
 
@@ -541,6 +585,8 @@ k = 1.380649e-23
 temperature = 300
 # Global start variable (global manager)
 globalStart = False
+# Global pause variable (global manager)
+paused = False
 
 
 
