@@ -2,6 +2,9 @@
 #                                             Setup                                             #
 #===============================================================================================#
 # Libraries
+# Iterable annotations
+from collections.abc import Iterable
+
 # Library for combinations of particles without repetition
 from itertools import combinations
 
@@ -19,6 +22,9 @@ from time import sleep
 
 # Importing of all VPython tools (graphic library)
 from vpython import *
+
+# Array support
+import numpy
 
 
 
@@ -59,7 +65,7 @@ with open(file, 'rb') as f:
 #===============================================================================================#
 #                                        Velocities Graph                                       #
 #===============================================================================================#
-def generateTheoryCurve(e, nParticlesTheory):
+def generateTheoryCurve(e:int, nParticlesTheory:int) -> None:
     '''Generate the theory curve for a given number of particles of specific element.
 
     Args:
@@ -83,7 +89,7 @@ def generateTheoryCurve(e, nParticlesTheory):
 
 
 
-def getVelocity(p):
+def getVelocity(p:sphere) -> float:
     '''Calculates magnitute of velocity of the particle.
 
     Args:
@@ -96,7 +102,7 @@ def getVelocity(p):
 
 
 
-def getHist(v):
+def getHist(v:float) -> int:
     '''Calculates the bin for the velocity based on deltaV.
 
     Args:
@@ -109,7 +115,7 @@ def getHist(v):
 
 
 
-def drawHist(particles):
+def drawHist(particles:Iterable[list, numpy.array]) -> None:
     '''Generates and plots the histogram of velocities of the simulation.
 
     Args:
@@ -135,7 +141,7 @@ def drawHist(particles):
 #===============================================================================================#
 #                                        Common Functions                                       #
 #===============================================================================================#
-def RGB2VEC(r, g, b):
+def RGB2VEC(r:float, g:float, b:float) -> vector:
     '''Generates a VPython Vector object from RGB information.
 
     Args:
@@ -150,7 +156,7 @@ def RGB2VEC(r, g, b):
 
 
 
-def createWalls(solidWalls):
+def createWalls(solidWalls:bool) -> None:
     '''Generate the walls of the simulation.
 
     Args:
@@ -201,7 +207,7 @@ def createWalls(solidWalls):
 
 
 
-def getRadii(e):
+def getRadii(e:int) -> float:
     '''Get the atomic radius of given element.
 
     Args:
@@ -223,7 +229,7 @@ def getRadii(e):
 
 
 
-def generateMass(e):
+def generateMass(e:int) -> float:
     '''Generates a mass for the particle with given element.
 
     Args:
@@ -236,7 +242,7 @@ def generateMass(e):
 
 
 
-def generateVelocity(particleMass, d3=True):
+def generateVelocity(particleMass:float, d3:bool=True) -> vector:
     '''Generates a velocity vector for particle initialization.
 
     Args:
@@ -267,7 +273,7 @@ def generateVelocity(particleMass, d3=True):
 
 
 
-def getPositionAndRadius(p):
+def getPositionAndRadius(p:sphere) -> tuple[vector, float]:
     '''Get the position and radius of particle.
 
     Args:
@@ -280,7 +286,7 @@ def getPositionAndRadius(p):
 
 
 
-def generatePosition(d3=True):
+def generatePosition(d3:bool=True) -> vector:
     '''Generates a postion vector for particle initialization.
 
     Args:
@@ -296,7 +302,7 @@ def generatePosition(d3=True):
 
 
 
-def generateParticle(e, d3=True):
+def generateParticle(e:int, d3:bool=True) -> sphere:
     '''Generate a particle (VPython Sphere object) for the simulation
 
     Args:
@@ -334,7 +340,7 @@ def generateParticle(e, d3=True):
 
 
 
-def newVelocity(p1, p2):
+def newVelocity(p1:sphere, p2:sphere) -> tuple[vector, vector]:
     '''Calculates and returns the new velocity for 2 particles colliding.
 
     Args:
@@ -355,7 +361,7 @@ def newVelocity(p1, p2):
 
 
 
-def collision(particles):
+def collision(particles:Iterable[list, numpy.array]) -> None:
     '''Detects and applies collisions for all particles.
 
     Args:
@@ -375,7 +381,7 @@ def collision(particles):
 
 
 
-def updateNeighbours(p1, particles):
+def updateNeighbours(p1:sphere, particles:Iterable[list, numpy.array]) -> None:
     '''Updates the neighbours of 1 particle.
     
     Args:
@@ -394,7 +400,7 @@ def updateNeighbours(p1, particles):
 
 
 
-def updateNeighboursAllParticles(particles):
+def updateNeighboursAllParticles(particles:Iterable[list, numpy.array]) -> None:
     '''Updates the neighbours of each particles.
     
     Args:
@@ -413,7 +419,7 @@ def updateNeighboursAllParticles(particles):
 #===============================================================================================#
 #                                          3D Functions                                         #
 #===============================================================================================#
-def step3D(particles):
+def step3D(particles:Iterable[list, numpy.array]) -> None:
     '''Function to calculate next step of the simulation for 3D simulations.
 
     Args:
@@ -442,7 +448,7 @@ def step3D(particles):
 #===============================================================================================#
 #                                          2D Functions                                         #
 #===============================================================================================#
-def step2D(particles):
+def step2D(particles:Iterable[list, numpy.array]) -> None:
     '''Function to calculate next step of the simulation for 2D simulations.
 
     Args:
@@ -468,7 +474,7 @@ def step2D(particles):
 #===============================================================================================#
 #                                       Running Function                                        #
 #===============================================================================================#
-def run(d3=True):
+def run(d3:bool=True) -> None:
     '''Runs the global manager for the simulation.
 
     Observation:
@@ -579,12 +585,11 @@ def stepSimulation():
 
 
 
-def setNumberOfSteps(s):
+def setNumberOfSteps(s:slider) -> None:
     '''Set the number of steps of the manual simulation.'''
     global manager, numberOfStepsText
 
     x = s.value
-    print(x)
     numberOfStepsText.text = f'Número de passos: {x}'
     manager['numberOfSteps'] = x
 
@@ -692,7 +697,7 @@ globalStart = False
 # Global pause variable (global manager)
 paused = False
 # Neighbour otimization
-neighbourImplementation = False
+neighbourImplementation = True
 # Define if neightbours are update together or separetly (global manager)
 # DO NOT CHANGE!!! NOT IMPLEMENTED CORRECTLY! WILL MAKE SIMULATION RUN SLOWER (MUCH SLOWER)!
 globalUpdateNeighbour = True
@@ -703,4 +708,4 @@ globalUpdateNeighbour = True
 # Creating the walls of the simulation
 createWalls(False)
 # Running the simulation
-run(False)
+run(True)
