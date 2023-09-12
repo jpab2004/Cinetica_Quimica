@@ -325,9 +325,10 @@ def generateParticle(e, d3=True):
     particle.v = particleVelocity
     particle.m = particleMass
 
-    particle.neighbours = []
-    particle.neighbourShell = 2*dt*loopNeighboursCount*particle.v
-    particle.lastUpdatePos = particle.pos
+    if neighbourImplementation:
+        particle.neighbours = []
+        particle.neighbourShell = 2*dt*loopNeighboursCount*particle.v
+        particle.lastUpdatePos = particle.pos
 
     return particle
 
@@ -360,8 +361,13 @@ def collision(particles):
     Args:
         particles: VPython Sphere object iterator, contains all particle objects in the simulation.
     '''
-    for p1 in particles:
-        for p2 in p1.neighbours:
+    if neighbourImplementation:
+        for p1 in particles:
+            for p2 in p1.neighbours:
+                if (mag(p1.pos - p2.pos) <= p1.radius + p2.radius) and (mag( (p1.pos + p1.v*dt) - (p2.pos + p2.v*dt) ) < mag(p1.pos - p2.pos)):
+                    p1.v, p2.v = newVelocity(p1, p2)
+    else:
+        for p1, p2 in combinations(particles, 2):
             if (mag(p1.pos - p2.pos) <= p1.radius + p2.radius) and (mag( (p1.pos + p1.v*dt) - (p2.pos + p2.v*dt) ) < mag(p1.pos - p2.pos)):
                 p1.v, p2.v = newVelocity(p1, p2)
     
@@ -427,7 +433,7 @@ def step3D(particles):
             p.v.z *= -1
             p.pos += p.v*dt
 
-        if ((not globalUpdateNeighbour) and (mag(p.neighbourShell - p.lastUpdatePos) - mag(p.pos - p.lastUpdatePos) <= 0 )): updateNeighbours(p, particles)
+        if ((neighbourImplementation) and (not globalUpdateNeighbour) and (mag(p.neighbourShell - p.lastUpdatePos) - mag(p.pos - p.lastUpdatePos) <= 0 )): updateNeighbours(p, particles)
 
     return
 
@@ -453,7 +459,7 @@ def step2D(particles):
             p.v.y *= -1
             p.pos += p.v*dt
 
-        if ((not globalUpdateNeighbour) and (mag(p.neighbourShell - p.lastUpdatePos) - mag(p.pos - p.lastUpdatePos) <= 0 )): updateNeighbours(p, particles)
+        if ((neighbourImplementation) and (not globalUpdateNeighbour) and (mag(p.neighbourShell - p.lastUpdatePos) - mag(p.pos - p.lastUpdatePos) <= 0 )): updateNeighbours(p, particles)
     
     return
 
@@ -492,15 +498,16 @@ def run(d3=True):
     while(True):
         while(globalStart):
             while(not paused):
-                if ((globalUpdateNeighbour) and (manager['j'] >= loopNeighboursCount)): updateNeighboursAllParticles(particles); manager['j'] = 1
+                if ((neighbourImplementation) and (globalUpdateNeighbour) and (manager['j'] >= loopNeighboursCount)): updateNeighboursAllParticles(particles); manager['j'] = 1
 
                 rate(fps)
                 manager['runFunction'](particles)
                 collision(particles)
 
                 if manager['i'] >= loopVerboseCount: drawHist(particles); manager['i'] = 1
+
                 manager['i'] = manager['i'] + 1
-                manager['j'] = manager['j'] + 1
+                if (neighbourImplementation): manager['j'] = manager['j'] + 1
         sleep(.1)
     
     return
@@ -558,7 +565,7 @@ def stepSimulation():
     global particles, manager
 
     for _ in range(manager['numberOfSteps']):
-        if ((globalUpdateNeighbour) and (manager['j'] >= loopNeighboursCount)): updateNeighboursAllParticles(particles); manager['j'] = 1
+        if ((neighbourImplementation) and (globalUpdateNeighbour) and (manager['j'] >= loopNeighboursCount)): updateNeighboursAllParticles(particles); manager['j'] = 1
 
         rate(fps)
         manager['runFunction'](particles)
@@ -566,7 +573,7 @@ def stepSimulation():
 
         if manager['i'] >= loopVerboseCount: drawHist(particles); manager['i'] = 1
         manager['i'] = manager['i'] + 1
-        manager['j'] = manager['j'] + 1
+        if (neighbourImplementation): manager['j'] = manager['j'] + 1
 
     return
 
@@ -628,7 +635,7 @@ makeTrails = False
 # Particle list initialization
 particles = []
 # Buffer for the radius size (graphics)
-radiiBuff = .15
+radiiBuff = .5
 # Buffer for generating the initial position of particles
 positionBuffer = .8*side
 # Bool for defining if particles start randomly scattered or on the center
@@ -644,7 +651,7 @@ loopNeighboursCount = 75
 # List of element to simulate (atomic number)
 elementsToSimulate = [2]
 # The amount of each element to simulate
-elementsCount = [600]
+elementsCount = [100]
 # Total number of particles
 nParticles = sum(elementsCount)
 
@@ -684,6 +691,8 @@ temperature = 300
 globalStart = False
 # Global pause variable (global manager)
 paused = False
+# Neighbour otimization
+neighbourImplementation = False
 # Define if neightbours are update together or separetly (global manager)
 # DO NOT CHANGE!!! NOT IMPLEMENTED CORRECTLY! WILL MAKE SIMULATION RUN SLOWER (MUCH SLOWER)!
 globalUpdateNeighbour = True
@@ -694,4 +703,4 @@ globalUpdateNeighbour = True
 # Creating the walls of the simulation
 createWalls(False)
 # Running the simulation
-run(True)
+run(False)
