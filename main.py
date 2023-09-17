@@ -9,7 +9,7 @@ from collections.abc import Iterable
 from itertools import combinations
 
 # Function to generate pseudorandom numbers equally distributed
-from random import uniform
+from random import uniform, random
 
 # Function to load element data for the simulation
 from pickle import load
@@ -371,7 +371,11 @@ def collision(particles:Iterable[list, numpy.array]) -> None:
         for p1 in particles:
             for p2 in p1.neighbours:
                 if (mag(p1.pos - p2.pos) <= p1.radius + p2.radius) and (mag( (p1.pos + p1.v*dt) - (p2.pos + p2.v*dt) ) < mag(p1.pos - p2.pos)):
-                    p1.v, p2.v = newVelocity(p1, p2)
+                    if compoundSynthesisChance > random():
+                        compounds.append(compound([p1, p2]))
+                        del p1, p2
+                    else:
+                        p1.v, p2.v = newVelocity(p1, p2)
     else:
         for p1, p2 in combinations(particles, 2):
             if (mag(p1.pos - p2.pos) <= p1.radius + p2.radius) and (mag( (p1.pos + p1.v*dt) - (p2.pos + p2.v*dt) ) < mag(p1.pos - p2.pos)):
@@ -640,9 +644,17 @@ makeTrails = False
 
 
 
-# Particle variables
+# Compounds variables
+# Chance for a compounds to happen
+compoundSynthesisChance = .1
+
+
+
+# Molecules variables
 # Particle list initialization
 particles = []
+# Compounds list initialization
+compounds = []
 # Buffer for the radius size (graphics)
 radiiBuff = .3
 # Buffer for generating the initial position of particles
@@ -652,7 +664,7 @@ randomPosition = True
 # Bool for defining use of empirical radii or calculated radii
 empiricalRadii = True
 # Amount of loops to update the list of neighbours of each particle (DOES NOT WORK WITH LOW NUMBERS)
-loopNeighboursCount = 1
+loopNeighboursCount = 75
 # Size of the neightbour shell
 neighbourShellBuffer = 1.5
 
