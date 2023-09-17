@@ -333,8 +333,8 @@ def generateParticle(e:int, d3:bool=True) -> sphere:
 
     if neighbourImplementation:
         particle.neighbours = []
-        particle.neighbourShell = 2*dt*loopNeighboursCount*particle.v
-        particle.lastUpdatePos = particle.pos
+        particle.neighbourShell = mag(neighbourShellBuffer*dt*loopNeighboursCount*particle.v)
+        particle.lastUpdatePosDistance = 0
 
     return particle
 
@@ -389,8 +389,8 @@ def updateNeighbours(p1:sphere, particles:Iterable[list, numpy.array]) -> None:
         particles: VPython Sphere object iterator, contains all particle objects in the simulation.
     '''
     setattr(p1, 'neighbours', [])
-    p1.neighbourShell = 2.2*dt*loopNeighboursCount*p1.v
-    p1.lastUpdatePos = p1.pos
+    p1.neighbourShell = mag(neighbourShellBuffer*dt*loopNeighboursCount*p1.v)
+    p1.lastUpdatePosDistance = 0
     for p2 in particles:
         if p1 == p2:continue
         if (mag(p1.pos - p2.pos) <= 2.2*dt*loopNeighboursCount*max(mag(p1.v), mag(p2.v))):
@@ -455,7 +455,9 @@ def step2D(particles:Iterable[list, numpy.array]) -> None:
         particles: VPython Sphere object iterator, contains all particle objects in the simulation.
     '''
     for p in particles:
+        lastPos = mag(p.pos)
         p.pos += p.v*dt
+        p.lastUpdatePosDistance += abs(lastPos - mag(p.pos))
         wallCollision = side - .5*thickness - p.radius
 
         if not (wallCollision > p.pos.x > -wallCollision):
@@ -465,7 +467,7 @@ def step2D(particles:Iterable[list, numpy.array]) -> None:
             p.v.y *= -1
             p.pos += p.v*dt
 
-        if ((neighbourImplementation) and (not globalUpdateNeighbour) and (mag(p.neighbourShell - p.lastUpdatePos) - mag(p.pos - p.lastUpdatePos) <= 0 )): updateNeighbours(p, particles)
+        if ((neighbourImplementation) and (not globalUpdateNeighbour) and (p.lastUpdatePosDistance >= p.neighbourShell)): updateNeighbours(p, particles)
     
     return
 
@@ -640,7 +642,7 @@ makeTrails = False
 # Particle list initialization
 particles = []
 # Buffer for the radius size (graphics)
-radiiBuff = .5
+radiiBuff = .25
 # Buffer for generating the initial position of particles
 positionBuffer = .8*side
 # Bool for defining if particles start randomly scattered or on the center
@@ -656,7 +658,7 @@ loopNeighboursCount = 75
 # List of element to simulate (atomic number)
 elementsToSimulate = [2]
 # The amount of each element to simulate
-elementsCount = [100]
+elementsCount = [600]
 # Total number of particles
 nParticles = sum(elementsCount)
 
@@ -698,6 +700,8 @@ globalStart = False
 paused = False
 # Neighbour otimization
 neighbourImplementation = True
+# Size of the neightbour shell
+neighbourShellBuffer = 1.5
 # Define if neightbours are update together or separetly (global manager)
 # DO NOT CHANGE!!! NOT IMPLEMENTED CORRECTLY! WILL MAKE SIMULATION RUN SLOWER (MUCH SLOWER)!
 globalUpdateNeighbour = True
@@ -708,4 +712,4 @@ globalUpdateNeighbour = True
 # Creating the walls of the simulation
 createWalls(False)
 # Running the simulation
-run(True)
+run(False)
