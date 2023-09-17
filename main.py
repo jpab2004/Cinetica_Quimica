@@ -439,7 +439,7 @@ def step3D(particles:Iterable[list, numpy.array]) -> None:
             p.v.z *= -1
             p.pos += p.v*dt
 
-        if ((neighbourImplementation) and (not globalUpdateNeighbour) and (mag(p.neighbourShell - p.lastUpdatePos) - mag(p.pos - p.lastUpdatePos) <= 0 )): updateNeighbours(p, particles)
+        if ((neighbourImplementation) and (not globalUpdateNeighbour) and (p.lastUpdatePosDistance >= p.neighbourShell)): updateNeighbours(p, particles)
 
     return
 
@@ -455,10 +455,12 @@ def step2D(particles:Iterable[list, numpy.array]) -> None:
         particles: VPython Sphere object iterator, contains all particle objects in the simulation.
     '''
     for p in particles:
-        lastPos = mag(p.pos)
+        if neighbourImplementation: lastPos = mag(p.pos)
+
         p.pos += p.v*dt
-        p.lastUpdatePosDistance += abs(lastPos - mag(p.pos))
         wallCollision = side - .5*thickness - p.radius
+
+        if neighbourImplementation: p.lastUpdatePosDistance += abs(lastPos - mag(p.pos))
 
         if not (wallCollision > p.pos.x > -wallCollision):
             p.v.x *= -1
