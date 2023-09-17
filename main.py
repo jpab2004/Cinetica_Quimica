@@ -333,7 +333,7 @@ def generateParticle(e:int, d3:bool=True) -> sphere:
 
     if neighbourImplementation:
         particle.neighbours = []
-        particle.neighbourShell = mag(neighbourShellBuffer*dt*loopNeighboursCount*particle.v)
+        particle.neighbourShell = particle.radius + mag(neighbourShellBuffer*dt*loopNeighboursCount*particle.v)
         particle.lastUpdatePosDistance = 0
 
     return particle
@@ -389,11 +389,11 @@ def updateNeighbours(p1:sphere, particles:Iterable[list, numpy.array]) -> None:
         particles: VPython Sphere object iterator, contains all particle objects in the simulation.
     '''
     setattr(p1, 'neighbours', [])
-    p1.neighbourShell = mag(neighbourShellBuffer*dt*loopNeighboursCount*p1.v)
+    p1.neighbourShell = p1.radius + mag(neighbourShellBuffer*dt*loopNeighboursCount*p1.v)
     p1.lastUpdatePosDistance = 0
     for p2 in particles:
         if p1 == p2:continue
-        if (mag(p1.pos - p2.pos) <= 2.2*dt*loopNeighboursCount*max(mag(p1.v), mag(p2.v))):
+        if (mag(p1.pos - p2.pos) <= (p1.radius + 2.2*dt*loopNeighboursCount*max(mag(p1.v), mag(p2.v)))):
             p1.neighbours.append(p2)
     
     return
@@ -408,7 +408,7 @@ def updateNeighboursAllParticles(particles:Iterable[list, numpy.array]) -> None:
     '''
     [setattr(p, 'neighbours', []) for p in particles]
     for p1, p2 in combinations(particles, 2):   
-        if (mag(p1.pos - p2.pos) <= 2.2*dt*loopNeighboursCount*max(mag(p1.v), mag(p2.v))):
+        if (mag(p1.pos - p2.pos) <= (p1.radius + 2.2*dt*loopNeighboursCount*max(mag(p1.v), mag(p2.v)))):
             p1.neighbours.append(p2)
             p2.neighbours.append(p1)
 
@@ -644,15 +644,17 @@ makeTrails = False
 # Particle list initialization
 particles = []
 # Buffer for the radius size (graphics)
-radiiBuff = .25
+radiiBuff = .3
 # Buffer for generating the initial position of particles
 positionBuffer = .8*side
 # Bool for defining if particles start randomly scattered or on the center
 randomPosition = True
 # Bool for defining use of empirical radii or calculated radii
 empiricalRadii = True
-# Amount of loops to update the list of neighbours of each particle
-loopNeighboursCount = 75
+# Amount of loops to update the list of neighbours of each particle (DOES NOT WORK WITH LOW NUMBERS)
+loopNeighboursCount = 1
+# Size of the neightbour shell
+neighbourShellBuffer = 1.5
 
 
 
@@ -660,7 +662,7 @@ loopNeighboursCount = 75
 # List of element to simulate (atomic number)
 elementsToSimulate = [2]
 # The amount of each element to simulate
-elementsCount = [600]
+elementsCount = [200]
 # Total number of particles
 nParticles = sum(elementsCount)
 
@@ -702,8 +704,6 @@ globalStart = False
 paused = False
 # Neighbour otimization
 neighbourImplementation = True
-# Size of the neightbour shell
-neighbourShellBuffer = 1.5
 # Define if neightbours are update together or separetly (global manager)
 # DO NOT CHANGE!!! NOT IMPLEMENTED CORRECTLY! WILL MAKE SIMULATION RUN SLOWER (MUCH SLOWER)!
 globalUpdateNeighbour = True
