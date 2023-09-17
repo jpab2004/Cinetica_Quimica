@@ -652,7 +652,7 @@ randomPosition = True
 # Bool for defining use of empirical radii or calculated radii
 empiricalRadii = True
 # Amount of loops to update the list of neighbours of each particle (DOES NOT WORK WITH LOW NUMBERS)
-loopNeighboursCount = 1
+loopNeighboursCount = 75
 # Size of the neightbour shell
 neighbourShellBuffer = 1.5
 
