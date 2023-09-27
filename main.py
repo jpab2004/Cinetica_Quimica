@@ -393,7 +393,7 @@ def updateNeighbours(p1:sphere, particles:Iterable[list, numpy.array]) -> None:
     p1.lastUpdatePosDistance = 0
     for p2 in particles:
         if p1 == p2:continue
-        if (mag(p1.pos - p2.pos) <= (p1.radius + 2.2*dt*loopNeighboursCount*max(mag(p1.v), mag(p2.v)))):
+        if (mag(p1.pos - p2.pos) <= (p1.radius + neighbourMaxShellBuffer*dt*loopNeighboursCount*max(mag(p1.v), mag(p2.v)))):
             p1.neighbours.append(p2)
     
     return
@@ -408,7 +408,7 @@ def updateNeighboursAllParticles(particles:Iterable[list, numpy.array]) -> None:
     '''
     [setattr(p, 'neighbours', []) for p in particles]
     for p1, p2 in combinations(particles, 2):   
-        if (mag(p1.pos - p2.pos) <= (p1.radius + 2.2*dt*loopNeighboursCount*max(mag(p1.v), mag(p2.v)))):
+        if (mag(p1.pos - p2.pos) <= (p1.radius + neighbourMaxShellBuffer*dt*loopNeighboursCount*max(mag(p1.v), mag(p2.v)))):
             p1.neighbours.append(p2)
             p2.neighbours.append(p1)
 
@@ -584,7 +584,6 @@ def stepSimulation():
 
         rate(fps)
         manager['runFunction'](particles)
-        collision(particles)
 
         if manager['i'] >= loopVerboseCount: drawHist(particles); manager['i'] = 1
         manager['i'] = manager['i'] + 1
@@ -631,7 +630,7 @@ manager['numberOfSteps'] = numberOfStepsSlider.value
 #===============================================================================================#
 # Wall variables
 # Size of each wall (Angstrom)
-side = 5
+side = 10
 # Thickness of each wall
 thickness = .5
 
@@ -658,8 +657,10 @@ randomPosition = True
 empiricalRadii = True
 # Amount of loops to update the list of neighbours of each particle (DOES NOT WORK WITH LOW NUMBERS)
 loopNeighboursCount = 75
-# Size of the neightbour shell
+# Size of the neighbour shell
 neighbourShellBuffer = 1.5
+# Size of the outer neighbour shell
+neighbourMaxShellBuffer = 2.2
 
 
 
@@ -667,7 +668,7 @@ neighbourShellBuffer = 1.5
 # List of element to simulate (atomic number)
 elementsToSimulate = [1]
 # The amount of each element to simulate
-elementsCount = [10]
+elementsCount = [300]
 # Total number of particles
 nParticles = sum(elementsCount)
 
@@ -700,7 +701,7 @@ loopVerboseCount = 5
 # Delta Time for steps on the simulation
 dt = 5e-6
 # FPS of the simulation (max available fps, can be less)
-fps = 100
+fps = 500
 # Boltzmann Constant for calculations
 k = 1.380649e-23
 # Temperature of the simulation
@@ -711,7 +712,7 @@ globalStart = False
 paused = False
 # Neighbour otimization
 neighbourImplementation = True
-# Define if neightbours are update together or separetly (global manager)
+# Define if neighbours are update together or separetly (global manager)
 # DO NOT CHANGE!!! NOT IMPLEMENTED CORRECTLY! WILL MAKE SIMULATION RUN SLOWER (MUCH SLOWER)!
 globalUpdateNeighbour = True
 
@@ -721,4 +722,4 @@ globalUpdateNeighbour = True
 # Creating the walls of the simulation
 createWalls(False)
 # Running the simulation
-run(False)
+run(True)
