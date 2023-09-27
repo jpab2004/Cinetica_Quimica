@@ -9,7 +9,7 @@ from collections.abc import Iterable
 from itertools import combinations
 
 # Function to generate pseudorandom numbers equally distributed
-from random import uniform
+from random import uniform, random
 
 # Function to load element data for the simulation
 from pickle import load
@@ -175,7 +175,7 @@ def createWalls(solidWalls:bool) -> None:
         wallC = box(pos=vector(0, 0, -side), size=vector(s3, s3, thickness), color=vector(0, 0, 1))
     else:
         edgeColor = vector(1, 0, 1)
-        edgeRadius = .2
+        edgeRadius = side*.03
         edgeLength = 2*side
 
         if overallPretty:
@@ -219,9 +219,9 @@ def getRadii(e:int) -> float:
     f = lambda x: (exp(x/500) - .7) * radiiBuff
 
     if empiricalRadii:
-        radii = elements[e]['radii-empirical']
+        radii = elements[e]['radii-empirical']/1e2
     else:
-        radii = elements[e]['radii-calculated']
+        radii = elements[e]['radii-calculated']/1e2
 
     if isnan(radii): return f(150)    
 
@@ -416,6 +416,11 @@ def updateNeighboursAllParticles(particles:Iterable[list, numpy.array]) -> None:
 
 
 
+def react(ps, mol):
+    pass
+
+
+
 #===============================================================================================#
 #                                          3D Functions                                         #
 #===============================================================================================#
@@ -494,7 +499,7 @@ def run(d3:bool=True) -> None:
     else: manager['runFunction'] = step2D
 
     for element, count in zip(elementsToSimulate, elementsCount):
-        generateTheoryCurve(element, count)
+        if globalTheoryCurve: generateTheoryCurve(element, count)
         for _ in range(count):
             particle = generateParticle(element, d3)
             particles.append(particle)
@@ -625,8 +630,8 @@ manager['numberOfSteps'] = numberOfStepsSlider.value
 #                                           Simulation                                          #
 #===============================================================================================#
 # Wall variables
-# Size of each wall
-side = 10
+# Size of each wall (Angstrom)
+side = 5
 # Thickness of each wall
 thickness = .5
 
@@ -644,7 +649,7 @@ makeTrails = False
 # Particle list initialization
 particles = []
 # Buffer for the radius size (graphics)
-radiiBuff = .3
+radiiBuff = 1
 # Buffer for generating the initial position of particles
 positionBuffer = .8*side
 # Bool for defining if particles start randomly scattered or on the center
@@ -660,16 +665,18 @@ neighbourShellBuffer = 1.5
 
 # Elements
 # List of element to simulate (atomic number)
-elementsToSimulate = [2]
+elementsToSimulate = [1]
 # The amount of each element to simulate
-elementsCount = [200]
+elementsCount = [10]
 # Total number of particles
 nParticles = sum(elementsCount)
 
 
 
 # Velocity graph variables
-# Delta V for histogram binning 
+# Determine whether to generate the theory curve of each element or not
+globalTheoryCurve = False
+# Delta V for histogram binning
 dv = 100
 # Max velocity displayed on the graph
 maxVel = 6000
@@ -693,7 +700,7 @@ loopVerboseCount = 5
 # Delta Time for steps on the simulation
 dt = 5e-6
 # FPS of the simulation (max available fps, can be less)
-fps = 5000
+fps = 100
 # Boltzmann Constant for calculations
 k = 1.380649e-23
 # Temperature of the simulation
