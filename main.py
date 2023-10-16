@@ -56,9 +56,26 @@ manager = {
 
 # Elements
 # Importing the elements data
-file = 'Assets/elementsHashTable.pickle'
-with open(file, 'rb') as f:
+file1 = 'Assets/elementsHashTable.pickle'
+with open(file1, 'rb') as f:
     elements = load(f)
+
+file2 = 'Assets/moleculesHashTable.pickle'
+with open(file2, 'rb') as f:
+    molecules = load(f)
+
+
+
+#===============================================================================================#
+#                                         Aux Functions                                         #
+#===============================================================================================#
+def RGB2VEC(r, g, b): 
+    return vector(r/255, g/255, b/255)
+
+def HEX2VEC(hex):
+    hex = hex.lstrip('#')
+    r, g, b = tuple(int(hex[i:i+2], 16) for i in (0, 2, 4))
+    return RGB2VEC(r, g, b)
 
 
 
@@ -72,9 +89,10 @@ def generateTheoryCurve(e:int, nParticlesTheory:int) -> None:
         e: int, element atomic number;
         nParticlesTheory: int, number of particles for the specified element.
     '''
-    theory = gcurve(color=elements[e]['color'], label=elements[e]['name-pt'])
+    global velGraph
+    
+    theory = gcurve(color=elements[e]['color'], label=elements[e]['name-pt'], graph=velGraph)
     mass = generateMass(e)
-
 
     deltaV = 10
     for v in range(0, maxVel+deltaV, deltaV):
@@ -121,7 +139,7 @@ def drawHist(particles:Iterable[list, numpy.array]) -> None:
     Args:
         particles: VPython Sphere object iterator, contains all particle objects in the simulation.
     '''
-    global bars
+    global velBars
 
     histData = {}
     vels = list(map(getVelocity, particles))
@@ -132,7 +150,7 @@ def drawHist(particles:Iterable[list, numpy.array]) -> None:
             histData[i] = 0
 
     histData = [[v*dv + .5*dv, histData[v]/nParticles] if v in histData else [v*dv + .5*dv, 0] for v in range(max(histData))]
-    bars.data = histData
+    velBars.data = histData
 
     return
 
@@ -174,7 +192,7 @@ def createWalls(solidWalls:bool) -> None:
         
         wallC = box(pos=vector(0, 0, -side), size=vector(s3, s3, thickness), color=vector(0, 0, 1))
     else:
-        edgeColor = vector(1, 0, 1)
+        edgeColor = HEX2VEC('#dbf54c')
         edgeRadius = side*.03
         edgeLength = 2*side
 
@@ -312,6 +330,8 @@ def generateParticle(e:int, d3:bool=True) -> sphere:
     Returns:
         VPython Sphere object, the particle for the simulation.
     '''
+    global particleEmission
+
     particleRadius = getRadii(e)
     particleMass = generateMass(e)
     particleColor = elements[e]['color']
@@ -330,6 +350,9 @@ def generateParticle(e:int, d3:bool=True) -> sphere:
     particle = sphere(pos=particlePosition, radius=particleRadius, color=particleColor, make_trail=makeTrails, retain=10)
     particle.v = particleVelocity
     particle.m = particleMass
+    particle.emissive = particleEmission
+    particle.element = e
+    particle.mol = None
 
     if neighbourImplementation:
         particle.neighbours = []
@@ -361,21 +384,73 @@ def newVelocity(p1:sphere, p2:sphere) -> tuple[vector, vector]:
 
 
 
+def react(mol:str, p1:sphere, p2:sphere, toKill:Iterable[list, numpy.array]) -> Iterable[list, numpy.array]:
+    '''Reacts two particles to make a molecule.
+    
+    Args:
+        mol: String, molecule that the reaction is turning into;
+        p1: VPython Sphere object, particle 1 of the reaction;
+        p2: VPython Sphere object, particle 2 of the reaction;
+        toKill: VPython Sphere object iterator, contains all particle objects to be killed.
+    '''
+    v1, v2 = p1.v, p2.v
+    m1, m2 = p1.m, p2.m
+    r1, r2 = p1.pos, p2.pos
+    radius1, radius2 = p1.radius, p2.radius
+
+    m_ = m1 + m2
+    radius_ = (radius1 + radius2) / 1.5
+    r_ = (r1 + r2) / 2
+    v_ = (v1*m1 + v2*m2) / m_
+
+    p1.element = None
+    p1.mol = mol
+    p1.color = molecules[mol]['color']
+    p1.trail_color = molecules[mol]['color']
+
+    p1.m = m_
+    p1.v = v_
+    p1.pos = r_
+    p1.radius = radius_
+
+    toKill.append(p2)
+    return toKill
+
+
+
 def collision(particles:Iterable[list, numpy.array]) -> None:
     '''Detects and applies collisions for all particles.
 
     Args:
         particles: VPython Sphere object iterator, contains all particle objects in the simulation.
     '''
+    global nParticles
+    toKill = []
+
     if neighbourImplementation:
         for p1 in particles:
             for p2 in p1.neighbours:
                 if (mag(p1.pos - p2.pos) <= p1.radius + p2.radius) and (mag( (p1.pos + p1.v*dt) - (p2.pos + p2.v*dt) ) < mag(p1.pos - p2.pos)):
-                    p1.v, p2.v = newVelocity(p1, p2)
+                    if ((H2ReactionChance >= random()) and (p1.element == p2.element == 1)):
+                        toKill = react('H2', p1, p2, toKill)
+                    else:
+                        p1.v, p2.v = newVelocity(p1, p2)
     else:
         for p1, p2 in combinations(particles, 2):
             if (mag(p1.pos - p2.pos) <= p1.radius + p2.radius) and (mag( (p1.pos + p1.v*dt) - (p2.pos + p2.v*dt) ) < mag(p1.pos - p2.pos)):
-                p1.v, p2.v = newVelocity(p1, p2)
+                if ((H2ReactionChance >= random()) and (p1.element == p2.element == 1)):
+                    toKill = react('H2', p1, p2, toKill)
+                else:
+                    p1.v, p2.v = newVelocity(p1, p2)
+
+    for p in toKill:
+        p.visible = False
+        p.pos = vector(100,100,0)
+        p.vel = vector(0,0,0)
+        p.clear_trail()
+        particles.remove(p)
+        nParticles -= 1
+        del p
     
     return
 
@@ -413,11 +488,6 @@ def updateNeighboursAllParticles(particles:Iterable[list, numpy.array]) -> None:
             p2.neighbours.append(p1)
 
     return
-
-
-
-def react(ps, mol):
-    pass
 
 
 
@@ -628,9 +698,30 @@ manager['numberOfSteps'] = numberOfStepsSlider.value
 #===============================================================================================#
 #                                           Simulation                                          #
 #===============================================================================================#
+# Consts
+# Delta Time for steps on the simulation
+dt = 5e-6
+# FPS of the simulation (max available fps, can be less)
+fps = 5000
+# Boltzmann Constant for calculations
+k = 1.380649e-23
+# Temperature of the simulation
+temperature = 100
+# Global start variable (global manager)
+globalStart = False
+# Global pause variable (global manager)
+paused = False
+# Neighbour otimization
+neighbourImplementation = True
+# Define if neighbours are update together or separetly (global manager)
+# DO NOT CHANGE!!! NOT IMPLEMENTED CORRECTLY! WILL MAKE SIMULATION RUN SLOWER (MUCH SLOWER)!
+globalUpdateNeighbour = True
+
+
+
 # Wall variables
 # Size of each wall (Angstrom)
-side = 10
+side = 20
 # Thickness of each wall
 thickness = .5
 
@@ -641,6 +732,10 @@ thickness = .5
 overallPretty = True
 # Makes particles have trails
 makeTrails = False
+# Make particles emit light
+particleEmission = False
+# Creating a line between graphs and controls
+scene.append_to_caption("<br><hr><br>")
 
 
 
@@ -650,7 +745,7 @@ particles = []
 # Buffer for the radius size (graphics)
 radiiBuff = 1
 # Buffer for generating the initial position of particles
-positionBuffer = .8*side
+positionBuffer = .9*side
 # Bool for defining if particles start randomly scattered or on the center
 randomPosition = True
 # Bool for defining use of empirical radii or calculated radii
@@ -676,45 +771,46 @@ nParticles = sum(elementsCount)
 
 # Velocity graph variables
 # Determine whether to generate the theory curve of each element or not
-globalTheoryCurve = False
+globalTheoryCurve = True
 # Delta V for histogram binning
 dv = 100
 # Max velocity displayed on the graph
 maxVel = 6000
-# Width of the graph on the canvas
-graphWidth = 800
+# Width and height of the velocity graph on the canvas
+velGraphWidth, velGraphHeight = 850, 300
 # Initial histogram data for plotting
 histData = [(v*dv + .5*dv, 0) for v in range(int(maxVel/dv))]
 # Velocities graph creation
 velGraph = graph(title='Velocidade das partículas na simulação', xtitle='Velocidade (m/s)', xmax=maxVel,
-                 ymax=1, ytitle='Densidade de Probabilidade', fast=False, width=800, align='left',
-                 height=300, background=vector(0, 0, 0), foreground=vector(0, 0, 0))
+                ymax=1, ytitle='Densidade de Probabilidade', fast=False, width=velGraphWidth, height=velGraphHeight,
+                align='left', background=vector(0, 0, 0), foreground=vector(0, 0, 0))
 # Velocities graph initialization
-bars = gvbars(delta=dv, color=color.green, label='Número de Partículas')
-bars.plot(0, 0)
+velBars = gvbars(delta=dv, color=HEX2VEC('#00ff00'), label='Número de Partículas', graph=velGraph)
+velBars.plot(0, 0)
 # Amount of loops to update the graph (optimization)
 loopVerboseCount = 5
 
 
 
-# Consts
-# Delta Time for steps on the simulation
-dt = 5e-6
-# FPS of the simulation (max available fps, can be less)
-fps = 500
-# Boltzmann Constant for calculations
-k = 1.380649e-23
-# Temperature of the simulation
-temperature = 300
-# Global start variable (global manager)
-globalStart = False
-# Global pause variable (global manager)
-paused = False
-# Neighbour otimization
-neighbourImplementation = True
-# Define if neighbours are update together or separetly (global manager)
-# DO NOT CHANGE!!! NOT IMPLEMENTED CORRECTLY! WILL MAKE SIMULATION RUN SLOWER (MUCH SLOWER)!
-globalUpdateNeighbour = True
+# Reaction
+# Chance for a reaction to happen
+H2ReactionChance = .1
+# Width and height of the concentration graph on the canvas
+conGraphWidth, conGraphHeight = 850, 300
+# Create a scrollable graph or not
+scrollableConGraph = True
+# Concentration graph creation
+if scrollableConGraph:
+    conGraph = graph(title='Concentração dos elementos/moléculas na simulação', xtitle='Tempo (iterações)',
+    ytitle='Concentração', fast=False, width=conGraphWidth, height=conGraphHeight, align='left',
+    background=vector(0, 0, 0), foreground=vector(0, 0, 0), scroll=True, xmin=0, xmax=10*fps)
+else:
+    conGraph = graph(title='Concentração dos elementos/moléculas na simulação', xtitle='Tempo (iterações)',
+    ytitle='Concentração', fast=False, width=conGraphWidth, height=conGraphHeight, align='left',
+    background=vector(0, 0, 0), foreground=vector(0, 0, 0))
+g = gcurve(graph=conGraph, color=HEX2VEC('#ff0000'))
+g.plot(0, 1)
+g.plot(5*fps, 2)
 
 
 
@@ -722,4 +818,4 @@ globalUpdateNeighbour = True
 # Creating the walls of the simulation
 createWalls(False)
 # Running the simulation
-run(True)
+run(False)
