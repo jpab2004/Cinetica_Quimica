@@ -49,7 +49,9 @@ scene.append_to_caption("<div id='fps'/>")
 # Global simulation manager! DON'T CHANGE
 manager = {
     'histogramIterator': 1,
-    'neighbourIterator': 1
+    'neighbourIterator': 1,
+    'concentrationIterator': 1,
+    'iterations': 0
 }
 
 
@@ -480,13 +482,45 @@ def generateMolecule(mol:str, d3:bool=True) -> sphere:
 
 
 
-def generateMolConcentrations():
-    global concentrations, nParticles, molecules, elementsToSimulate, elementsCount, moleculesToSimulate, moleculesCount
+def generateParticlesAndCurves(d3):
+    '''Generate all particles and curves of the simulation.
+    
+    Args:
+        d3: bool, True if the simulation is 3-Dimensional, false else.
+    '''
+    global elements, elementsToSimulate, elementsCount, molecules, moleculesToSimulate, moleculesCount, globalTheoryCurve, particles
+
+    for element, count in zip(elementsToSimulate, elementsCount):
+        if globalTheoryCurve: generateTheoryCurveElement(element, count)
+        for _ in range(count):
+            particle = generateElement(element, d3)
+            particles.append(particle)
+
+    for mol, count in zip(moleculesToSimulate, moleculesCount):
+        if globalTheoryCurve: generateTheoryCurveMolecule(mol, count)
+        for _ in range(count):
+            particle = generateMolecule(mol, d3)
+            particles.append(particle)
+    
+    return
+
+
+
+def generateConcentrations():
+    global concentrations, nParticles, conGraph, portuguese
+    global elements, elementsToSimulate, elementsCount, molecules, moleculesToSimulate, moleculesCount
+
+    if portuguese:
+        name = 'name-pt'
+    else:
+        name = 'name-en'
 
     for e, count in zip(elementsToSimulate, elementsCount):
-        concentrations[e] = count
+        curve = gcurve(graph=conGraph, color=elements[e]['color'], label=elements[e][name])
+        concentrations[e] = [count, curve]
     for mol, count in zip(moleculesToSimulate, moleculesCount):
-        concentrations[mol] = count
+        curve = gcurve(graph=conGraph, color=molecules[mol]['color'], label=molecules[mol][name])
+        concentrations[mol] = [count, curve]
 
 
 
@@ -522,9 +556,9 @@ def react(mol:str, p1:sphere, p2:sphere, toKill:Iterable[list, numpy.array]) -> 
     '''
     global molecules, concentrations
 
-    concentrations[p1.element] -= 1
-    concentrations[p2.element] -= 1
-    concentrations[mol] += 1
+    concentrations[p1.element][0] -= 1
+    concentrations[p2.element][0] -= 1
+    concentrations[mol][0] += 1
 
     v1, v2 = p1.v, p2.v
     m1, m2 = p1.m, p2.m
@@ -587,6 +621,19 @@ def collision(particles:Iterable[list, numpy.array]) -> None:
         nParticles -= 1
         del p
     
+    return
+
+
+
+def updateConcentrations():
+    '''Updates the concentrations of all elements.'''
+    global concentrations, manager
+
+    for count, curve in concentrations.values():
+        curve.plot(manager['iterations'], count/nParticles)
+
+    manager['iterations'] += 1
+
     return
 
 
@@ -698,12 +745,16 @@ def stepSimulation():
     manager['runFunction'](particles)
     collision(particles)
 
+    if manager['concentrationIterator'] >= loopConcentrationVerboseCount:
+        updateConcentrations()
+        manager['concentrationIterator'] = 1
     if manager['histogramIterator'] >= loopHistogramVerboseCount:
         drawHist(particles)
         manager['histogramIterator'] = 1
 
-    manager['histogramIterator'] = manager['histogramIterator'] + 1
-    if (neighbourImplementation): manager['neighbourIterator'] = manager['neighbourIterator'] + 1
+    manager['histogramIterator'] += 1
+    manager['concentrationIterator'] += 1
+    if (neighbourImplementation): manager['neighbourIterator'] += 1
 
     return
 
@@ -719,24 +770,13 @@ def run(d3:bool=True) -> None:
     Args:
         d3: bool, True if the simulation is 3-Dimensional, false else.
     '''
-    global globalStart, startSimulationButton, particles, manager, concentrations, nParticles
+    global globalStart, startSimulationButton, manager
 
     if d3: manager['runFunction'] = step3D
     else: manager['runFunction'] = step2D
 
-    for element, count in zip(elementsToSimulate, elementsCount):
-        if globalTheoryCurve: generateTheoryCurveElement(element, count)
-        for _ in range(count):
-            particle = generateElement(element, d3)
-            particles.append(particle)
-
-    for mol, count in zip(moleculesToSimulate, moleculesCount):
-        if globalTheoryCurve: generateTheoryCurveMolecule(mol, count)
-        for _ in range(count):
-            particle = generateMolecule(mol, d3)
-            particles.append(particle)
-        
-    generateMolConcentrations()
+    generateParticlesAndCurves(d3)
+    generateConcentrations()
 
     startSimulationButton.disabled = False
 
@@ -844,7 +884,7 @@ resumeSimulationButton = button(pos=scene.caption_anchor, text='Resumir simulaç
 stepSimulationButton = button(pos=scene.caption_anchor, text='Rodar passos', bind=stepSimulationNTimes, disabled=True, left=50)
 
 # Creates the slider to change the number of manual steps
-numberOfStepsSlider = slider(min=1, max=500, value=20, step=1, length=220, bind=setNumberOfSteps, disabled=True, left=20)
+numberOfStepsSlider = slider(min=1, max=500, value=250, step=1, length=220, bind=setNumberOfSteps, disabled=True, left=20)
 numberOfStepsText = wtext(text=f'Número de passos: {numberOfStepsSlider.value}')
 manager['numberOfSteps'] = numberOfStepsSlider.value
 
@@ -894,6 +934,10 @@ retainTrail = 10
 particleEmission = False
 # Make Vpython use prettier spheres
 prettySpheres = True
+# Defines if graphs use the fast implementation or not
+globalFastGraph = False
+# Citing the theory curve to be imprecise
+scene.append_to_caption("A curva teórica apresentada de Boltzmann esta relacionada ao estado inicial da simulação")
 # Creating a line between graphs and controls
 scene.append_to_caption("<br><hr><br>")
 
@@ -925,9 +969,9 @@ elementsToSimulate = [1]
 # List of molecules to simulate
 moleculesToSimulate = ['H2']
 # The amount of each element to simulate
-elementsCount = [100]
+elementsCount = [300]
 # The amount of each molecule to simulate
-moleculesCount = [50]
+moleculesCount = [0]
 # Total number of particles
 nParticles = sum(elementsCount) + sum(moleculesCount)
 
@@ -946,7 +990,7 @@ velGraphWidth, velGraphHeight = 850, 300
 histData = [(v*dv + .5*dv, 0) for v in range(int(maxVel/dv))]
 # Velocities graph creation
 velGraph = graph(title='Velocidade das partículas na simulação', xtitle='Velocidade (m/s)', xmax=maxVel,
-                ymax=1, ytitle='Densidade de Probabilidade', fast=False, width=velGraphWidth, height=velGraphHeight,
+                ymax=1, ytitle='Densidade de Probabilidade', fast=globalFastGraph, width=velGraphWidth, height=velGraphHeight,
                 align='left', background=vector(0, 0, 0), foreground=vector(0, 0, 0))
 # Velocities graph initialization
 velBars = gvbars(delta=dv, color=HEX2VEC('#00ff00'), label='Número de Partículas', graph=velGraph)
@@ -960,24 +1004,22 @@ loopHistogramVerboseCount = 5
 # Lit of all concentrations
 concentrations = {}
 # Chance for a reaction to happen
-H2ReactionChance = .5
+H2ReactionChance = .25
 # Width and height of the concentration graph on the canvas
 conGraphWidth, conGraphHeight = 850, 300
 # Create a scrollable graph or not
 scrollableConGraph = True
+# Amount of loops to update the graph (optimization)
+loopConcentrationVerboseCount = 10
 # Concentration graph creation
 if scrollableConGraph:
-    conGraph = graph(title='Concentração dos elementos/moléculas na simulação', xtitle='Tempo (iterações)',
-    ytitle='Concentração', fast=False, width=conGraphWidth, height=conGraphHeight, align='left',
-    background=vector(0, 0, 0), foreground=vector(0, 0, 0), scroll=True, xmin=0, xmax=10*fps)
+    conGraph = graph(title='Concentração dos elementos/moléculas na simulação', xtitle=f'Tempo (iterações/{loopConcentrationVerboseCount})',
+    ytitle='Concentração', fast=globalFastGraph, width=conGraphWidth, height=conGraphHeight, align='left', ymin=0, ymax=1,
+    background=vector(0, 0, 0), foreground=vector(0, 0, 0), scroll=True, xmin=0, xmax=fps)
 else:
-    conGraph = graph(title='Concentração dos elementos/moléculas na simulação', xtitle='Tempo (iterações)',
-    ytitle='Concentração', fast=False, width=conGraphWidth, height=conGraphHeight, align='left',
+    conGraph = graph(title='Concentração dos elementos/moléculas na simulação', xtitle=f'Tempo (iterações/{loopConcentrationVerboseCount})',
+    ytitle='Concentração', fast=globalFastGraph, width=conGraphWidth, height=conGraphHeight, align='left', ymin=0, ymax=1,
     background=vector(0, 0, 0), foreground=vector(0, 0, 0))
-g = gcurve(graph=conGraph, color=HEX2VEC('#ff0000'))
-g.plot(0, 1)
-g.plot(5*fps, 2)
-
 
 
 # Running
