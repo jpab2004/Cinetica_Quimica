@@ -16,7 +16,7 @@ def HEX2VEC(hex):
 
 # Dicionaries
 molecules = {
-    'H2': {'atom-types': [1, 1], 'color': HEX2VEC('#f55f73')}
+    'H2': {'name-en': 'Hydrogen gas', 'name-pt': 'Gás hidrogênio', 'radii-empirical': 50, 'radii-calculated': 106, 'mass': 2.016, 'atom-types': [1, 1], 'color': HEX2VEC('#f55f73')}
 }
 
 

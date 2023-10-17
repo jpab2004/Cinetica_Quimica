@@ -48,8 +48,8 @@ scene.append_to_caption("<div id='fps'/>")
 # GLOBAL MANAGER
 # Global simulation manager! DON'T CHANGE
 manager = {
-    'i': 1,
-    'j': 1
+    'histogramIterator': 1,
+    'neighbourIterator': 1
 }
 
 
@@ -82,17 +82,50 @@ def HEX2VEC(hex):
 #===============================================================================================#
 #                                        Velocities Graph                                       #
 #===============================================================================================#
-def generateTheoryCurve(e:int, nParticlesTheory:int) -> None:
+def generateTheoryCurveElement(e:int, nParticlesTheory:int) -> None:
     '''Generate the theory curve for a given number of particles of specific element.
 
     Args:
         e: int, element atomic number;
         nParticlesTheory: int, number of particles for the specified element.
     '''
-    global velGraph
-    
-    theory = gcurve(color=elements[e]['color'], label=elements[e]['name-pt'], graph=velGraph)
-    mass = generateMass(e)
+    global velGraph, portuguese
+
+    if portuguese:
+        theory = gcurve(color=elements[e]['color'], label=elements[e]['name-pt'], graph=velGraph)
+    else:
+        theory = gcurve(color=elements[e]['color'], label=elements[e]['name-en'], graph=velGraph)
+        
+    mass = generateMassElement(e)
+
+    deltaV = 10
+    for v in range(0, maxVel+deltaV, deltaV):
+        alpha = (dv**2/deltaV) * nParticlesTheory
+        first = (mass / (2*pi*k*temperature))**1.5
+        second = exp(-.5*mass*v**2 / (k*temperature))*v**2
+
+        value = (alpha * first * second) / nParticles
+        theory.plot(v, value)
+
+    return
+
+
+
+def generateTheoryCurveMolecule(mol:str, nParticlesTheory:int) -> None:
+    '''Generate the theory curve for a given number of particles of specific molecule.
+
+    Args:
+        mol: str, molecule;
+        nParticlesTheory: int, number of particles for the specified molecule.
+    '''
+    global velGraph, portuguese
+
+    if portuguese:
+        theory = gcurve(color=molecules[mol]['color'], label=molecules[mol]['name-pt'], graph=velGraph)
+    else:
+        theory = gcurve(color=molecules[mol]['color'], label=molecules[mol]['name-en'], graph=velGraph)
+        
+    mass = generateMassMolecule(mol)
 
     deltaV = 10
     for v in range(0, maxVel+deltaV, deltaV):
@@ -196,7 +229,7 @@ def createWalls(solidWalls:bool) -> None:
         edgeRadius = side*.03
         edgeLength = 2*side
 
-        if overallPretty:
+        if boxCorner:
             vertex000 = sphere(pos=vector(-side, -side, -side), radius=edgeRadius, color=edgeColor)
             vertex001 = sphere(pos=vector(-side, -side, side), radius=edgeRadius, color=edgeColor)
             vertex010 = sphere(pos=vector(-side, side, -side), radius=edgeRadius, color=edgeColor)
@@ -225,7 +258,7 @@ def createWalls(solidWalls:bool) -> None:
 
 
 
-def getRadii(e:int) -> float:
+def getRadiiElement(e:int) -> float:
     '''Get the atomic radius of given element.
 
     Args:
@@ -247,16 +280,51 @@ def getRadii(e:int) -> float:
 
 
 
-def generateMass(e:int) -> float:
-    '''Generates a mass for the particle with given element.
+def getRadiiMolecule(mol:str) -> float:
+    '''Get the atomic radius of given molecule.
+
+    Args:
+        mol: str, molecule.
+    
+    Returns:
+        float, radius of the particle with given element.
+    '''
+    f = lambda x: (exp(x/500) - .7) * radiiBuff
+
+    if empiricalRadii:
+        radii = molecules[mol]['radii-empirical']/1e2
+    else:
+        radii = molecules[mol]['radii-calculated']/1e2
+
+    if isnan(radii): return f(150)    
+
+    return f(radii)
+
+
+
+def generateMassElement(e:int) -> float:
+    '''Generates a mass for the particle of given element.
 
     Args:
         e: int, element atomic number.
 
     Returns:
-        float, the mass of the particle with given element.
+        float, the mass of the particle of given element.
     '''
     return elements[e]['mass']*1E-3/6e23
+
+
+
+def generateMassMolecule(mol:str) -> float:
+    '''Generates a mass for the particle of given molecule.
+
+    Args:
+        mol: str, molecule.
+
+    Returns:
+        float, the mass of the particle of given molecule.
+    '''
+    return molecules[mol]['mass']*1E-3/6e23
 
 
 
@@ -320,7 +388,7 @@ def generatePosition(d3:bool=True) -> vector:
 
 
 
-def generateParticle(e:int, d3:bool=True) -> sphere:
+def generateElement(e:int, d3:bool=True) -> sphere:
     '''Generate a particle (VPython Sphere object) for the simulation
 
     Args:
@@ -330,10 +398,10 @@ def generateParticle(e:int, d3:bool=True) -> sphere:
     Returns:
         VPython Sphere object, the particle for the simulation.
     '''
-    global particleEmission
+    global particleEmission, makeTrails, retainTrail, elements
 
-    particleRadius = getRadii(e)
-    particleMass = generateMass(e)
+    particleRadius = getRadiiElement(e)
+    particleMass = generateMassElement(e)
     particleColor = elements[e]['color']
     particleVelocity = generateVelocity(particleMass, d3)/particleMass
 
@@ -347,7 +415,10 @@ def generateParticle(e:int, d3:bool=True) -> sphere:
                 still = True
                 break
 
-    particle = sphere(pos=particlePosition, radius=particleRadius, color=particleColor, make_trail=makeTrails, retain=10)
+    if prettySpheres:
+        particle = sphere(pos=particlePosition, radius=particleRadius, color=particleColor, make_trail=makeTrails, retain=retainTrail)
+    else:
+        particle = simple_sphere(pos=particlePosition, radius=particleRadius, color=particleColor, makeTrails=makeTrails, retain=retainTrail)
     particle.v = particleVelocity
     particle.m = particleMass
     particle.emissive = particleEmission
@@ -360,6 +431,62 @@ def generateParticle(e:int, d3:bool=True) -> sphere:
         particle.lastUpdatePosDistance = 0
 
     return particle
+
+
+
+def generateMolecule(mol:str, d3:bool=True) -> sphere:
+    '''Generate a particle (VPython Sphere object) for the simulation
+
+    Args:
+        mol: str, molecule;
+        d3: bool, True if the simulation is 3-Dimensional, false else.
+    
+    Returns:
+        VPython Sphere object, the particle for the simulation.
+    '''
+    global particleEmission, makeTrails, retainTrail, molecules
+
+    particleRadius = getRadiiMolecule(mol)
+    particleMass = generateMassMolecule(mol)
+    particleColor = molecules[mol]['color']
+    particleVelocity = generateVelocity(particleMass, d3)/particleMass
+
+    still = True
+    positions = list(map(getPositionAndRadius, particles))
+    while (still):
+        still = False
+        particlePosition = generatePosition(d3)
+        for pos, rad in positions:
+            if (mag(pos - particlePosition)) <= (rad + particleRadius):
+                still = True
+                break
+
+    if prettySpheres:
+        particle = sphere(pos=particlePosition, radius=particleRadius, color=particleColor, make_trail=makeTrails, retain=retainTrail)
+    else:
+        particle = simple_sphere(pos=particlePosition, radius=particleRadius, color=particleColor, makeTrails=makeTrails, retain=retainTrail)
+    particle.v = particleVelocity
+    particle.m = particleMass
+    particle.emissive = particleEmission
+    particle.element = None
+    particle.mol = mol
+
+    if neighbourImplementation:
+        particle.neighbours = []
+        particle.neighbourShell = particle.radius + mag(neighbourShellBuffer*dt*loopNeighboursCount*particle.v)
+        particle.lastUpdatePosDistance = 0
+
+    return particle
+
+
+
+def generateMolConcentrations():
+    global concentrations, nParticles, molecules, elementsToSimulate, elementsCount, moleculesToSimulate, moleculesCount
+
+    for e, count in zip(elementsToSimulate, elementsCount):
+        concentrations[e] = count
+    for mol, count in zip(moleculesToSimulate, moleculesCount):
+        concentrations[mol] = count
 
 
 
@@ -393,13 +520,18 @@ def react(mol:str, p1:sphere, p2:sphere, toKill:Iterable[list, numpy.array]) -> 
         p2: VPython Sphere object, particle 2 of the reaction;
         toKill: VPython Sphere object iterator, contains all particle objects to be killed.
     '''
+    global molecules, concentrations
+
+    concentrations[p1.element] -= 1
+    concentrations[p2.element] -= 1
+    concentrations[mol] += 1
+
     v1, v2 = p1.v, p2.v
     m1, m2 = p1.m, p2.m
     r1, r2 = p1.pos, p2.pos
-    radius1, radius2 = p1.radius, p2.radius
 
-    m_ = m1 + m2
-    radius_ = (radius1 + radius2) / 1.5
+    m_ = generateMassMolecule(mol)
+    radius_ = getRadiiMolecule(mol)
     r_ = (r1 + r2) / 2
     v_ = (v1*m1 + v2*m2) / m_
 
@@ -407,6 +539,9 @@ def react(mol:str, p1:sphere, p2:sphere, toKill:Iterable[list, numpy.array]) -> 
     p1.mol = mol
     p1.color = molecules[mol]['color']
     p1.trail_color = molecules[mol]['color']
+
+    p2.element = None
+    p2.mol = None
 
     p1.m = m_
     p1.v = v_
@@ -443,9 +578,9 @@ def collision(particles:Iterable[list, numpy.array]) -> None:
                 else:
                     p1.v, p2.v = newVelocity(p1, p2)
 
+    toKill = set(toKill)
     for p in toKill:
         p.visible = False
-        p.pos = vector(100,100,0)
         p.vel = vector(0,0,0)
         p.clear_trail()
         particles.remove(p)
@@ -553,6 +688,27 @@ def step2D(particles:Iterable[list, numpy.array]) -> None:
 #===============================================================================================#
 #                                       Running Function                                        #
 #===============================================================================================#
+def stepSimulation():
+    '''Make 1 step in the simulation globaly.'''
+    if ((neighbourImplementation) and (globalUpdateNeighbour) and (manager['neighbourIterator'] >= loopNeighboursCount)):
+        updateNeighboursAllParticles(particles)
+        manager['neighbourIterator'] = 1
+
+    rate(fps)
+    manager['runFunction'](particles)
+    collision(particles)
+
+    if manager['histogramIterator'] >= loopHistogramVerboseCount:
+        drawHist(particles)
+        manager['histogramIterator'] = 1
+
+    manager['histogramIterator'] = manager['histogramIterator'] + 1
+    if (neighbourImplementation): manager['neighbourIterator'] = manager['neighbourIterator'] + 1
+
+    return
+
+
+
 def run(d3:bool=True) -> None:
     '''Runs the global manager for the simulation.
 
@@ -563,16 +719,24 @@ def run(d3:bool=True) -> None:
     Args:
         d3: bool, True if the simulation is 3-Dimensional, false else.
     '''
-    global globalStart, startSimulationButton, particles, manager
+    global globalStart, startSimulationButton, particles, manager, concentrations, nParticles
 
     if d3: manager['runFunction'] = step3D
     else: manager['runFunction'] = step2D
 
     for element, count in zip(elementsToSimulate, elementsCount):
-        if globalTheoryCurve: generateTheoryCurve(element, count)
+        if globalTheoryCurve: generateTheoryCurveElement(element, count)
         for _ in range(count):
-            particle = generateParticle(element, d3)
+            particle = generateElement(element, d3)
             particles.append(particle)
+
+    for mol, count in zip(moleculesToSimulate, moleculesCount):
+        if globalTheoryCurve: generateTheoryCurveMolecule(mol, count)
+        for _ in range(count):
+            particle = generateMolecule(mol, d3)
+            particles.append(particle)
+        
+    generateMolConcentrations()
 
     startSimulationButton.disabled = False
 
@@ -583,16 +747,7 @@ def run(d3:bool=True) -> None:
     while(True):
         while(globalStart):
             while(not paused):
-                if ((neighbourImplementation) and (globalUpdateNeighbour) and (manager['j'] >= loopNeighboursCount)): updateNeighboursAllParticles(particles); manager['j'] = 1
-
-                rate(fps)
-                manager['runFunction'](particles)
-                collision(particles)
-
-                if manager['i'] >= loopVerboseCount: drawHist(particles); manager['i'] = 1
-
-                manager['i'] = manager['i'] + 1
-                if (neighbourImplementation): manager['j'] = manager['j'] + 1
+                stepSimulation()
         sleep(.1)
     
     return
@@ -645,19 +800,19 @@ def resumeSimulation():
 
 
 
-def stepSimulation():
-    '''Make 1 step in the simulation globaly.'''
-    global particles, manager
+def stepSimulationNTimes():
+    '''Make n step in the simulation globaly.'''
+    global particles, manager, stepSimulationButton, resumeSimulationButton
+
+    stepSimulationButton.disabled = True
+    resumeSimulationButton.disabled = True
 
     for _ in range(manager['numberOfSteps']):
-        if ((neighbourImplementation) and (globalUpdateNeighbour) and (manager['j'] >= loopNeighboursCount)): updateNeighboursAllParticles(particles); manager['j'] = 1
+        rate(50)
+        stepSimulation()
 
-        rate(fps)
-        manager['runFunction'](particles)
-
-        if manager['i'] >= loopVerboseCount: drawHist(particles); manager['i'] = 1
-        manager['i'] = manager['i'] + 1
-        if (neighbourImplementation): manager['j'] = manager['j'] + 1
+    stepSimulationButton.disabled = False
+    resumeSimulationButton.disabled = False
 
     return
 
@@ -686,10 +841,10 @@ scene.append_to_caption("<br>")
 # Creates the button to resume the simulation
 resumeSimulationButton = button(pos=scene.caption_anchor, text='Resumir simulação', bind=resumeSimulation, disabled=True, left=50)
 # Creates the button to make 1 step in the simulation
-stepSimulationButton = button(pos=scene.caption_anchor, text='Rodar passos', bind=stepSimulation, disabled=True, left=50)
+stepSimulationButton = button(pos=scene.caption_anchor, text='Rodar passos', bind=stepSimulationNTimes, disabled=True, left=50)
 
 # Creates the slider to change the number of manual steps
-numberOfStepsSlider = slider(min=1, max=100, value=20, step=1, length=220, bind=setNumberOfSteps, disabled=True, left=20)
+numberOfStepsSlider = slider(min=1, max=500, value=20, step=1, length=220, bind=setNumberOfSteps, disabled=True, left=20)
 numberOfStepsText = wtext(text=f'Número de passos: {numberOfStepsSlider.value}')
 manager['numberOfSteps'] = numberOfStepsSlider.value
 
@@ -707,6 +862,8 @@ fps = 5000
 k = 1.380649e-23
 # Temperature of the simulation
 temperature = 100
+# Determine the language of the simulation
+portuguese = True
 # Global start variable (global manager)
 globalStart = False
 # Global pause variable (global manager)
@@ -721,7 +878,7 @@ globalUpdateNeighbour = True
 
 # Wall variables
 # Size of each wall (Angstrom)
-side = 20
+side = 15
 # Thickness of each wall
 thickness = .5
 
@@ -729,11 +886,14 @@ thickness = .5
 
 # Prettier
 # Makes the simulation have prettier graphics (WIP)
-overallPretty = True
-# Makes particles have trails
+boxCorner = True
+# Makes particles have trails and their retain iterations
 makeTrails = False
+retainTrail = 10
 # Make particles emit light
 particleEmission = False
+# Make Vpython use prettier spheres
+prettySpheres = True
 # Creating a line between graphs and controls
 scene.append_to_caption("<br><hr><br>")
 
@@ -759,13 +919,17 @@ neighbourMaxShellBuffer = 2.2
 
 
 
-# Elements
+# Elements and Molecules
 # List of element to simulate (atomic number)
 elementsToSimulate = [1]
+# List of molecules to simulate
+moleculesToSimulate = ['H2']
 # The amount of each element to simulate
-elementsCount = [300]
+elementsCount = [100]
+# The amount of each molecule to simulate
+moleculesCount = [50]
 # Total number of particles
-nParticles = sum(elementsCount)
+nParticles = sum(elementsCount) + sum(moleculesCount)
 
 
 
@@ -788,13 +952,15 @@ velGraph = graph(title='Velocidade das partículas na simulação', xtitle='Velo
 velBars = gvbars(delta=dv, color=HEX2VEC('#00ff00'), label='Número de Partículas', graph=velGraph)
 velBars.plot(0, 0)
 # Amount of loops to update the graph (optimization)
-loopVerboseCount = 5
+loopHistogramVerboseCount = 5
 
 
 
 # Reaction
+# Lit of all concentrations
+concentrations = {}
 # Chance for a reaction to happen
-H2ReactionChance = .1
+H2ReactionChance = .5
 # Width and height of the concentration graph on the canvas
 conGraphWidth, conGraphHeight = 850, 300
 # Create a scrollable graph or not
