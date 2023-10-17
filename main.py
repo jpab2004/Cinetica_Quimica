@@ -424,8 +424,7 @@ def generateElement(e:int, d3:bool=True) -> sphere:
     particle.v = particleVelocity
     particle.m = particleMass
     particle.emissive = particleEmission
-    particle.element = e
-    particle.mol = None
+    particle.type = e
 
     if neighbourImplementation:
         particle.neighbours = []
@@ -470,8 +469,7 @@ def generateMolecule(mol:str, d3:bool=True) -> sphere:
     particle.v = particleVelocity
     particle.m = particleMass
     particle.emissive = particleEmission
-    particle.element = None
-    particle.mol = mol
+    particle.type = mol
 
     if neighbourImplementation:
         particle.neighbours = []
@@ -556,8 +554,8 @@ def react(mol:str, p1:sphere, p2:sphere, toKill:Iterable[list, numpy.array]) -> 
     '''
     global molecules, concentrations
 
-    concentrations[p1.element][0] -= 1
-    concentrations[p2.element][0] -= 1
+    concentrations[p1.type][0] -= 1
+    concentrations[p2.type][0] -= 1
     concentrations[mol][0] += 1
 
     v1, v2 = p1.v, p2.v
@@ -569,13 +567,10 @@ def react(mol:str, p1:sphere, p2:sphere, toKill:Iterable[list, numpy.array]) -> 
     r_ = (r1 + r2) / 2
     v_ = (v1*m1 + v2*m2) / m_
 
-    p1.element = None
-    p1.mol = mol
+    p1.type = mol
+    p2.type = None
     p1.color = molecules[mol]['color']
     p1.trail_color = molecules[mol]['color']
-
-    p2.element = None
-    p2.mol = None
 
     p1.m = m_
     p1.v = v_
@@ -600,10 +595,14 @@ def collision(particles:Iterable[list, numpy.array]) -> None:
         for p1 in particles:
             for p2 in p1.neighbours:
                 if (mag(p1.pos - p2.pos) <= p1.radius + p2.radius) and (mag( (p1.pos + p1.v*dt) - (p2.pos + p2.v*dt) ) < mag(p1.pos - p2.pos)):
-                    if ((H2ReactionChance >= random()) and (p1.element == p2.element == 1)):
-                        toKill = react('H2', p1, p2, toKill)
-                    else:
-                        p1.v, p2.v = newVelocity(p1, p2)
+                    for mol in molecules:
+                        chance = molecules[mol]['chance']
+                        type1, type2 = molecules[mol]['reagents']
+                        if ((chance >= random()) and (((type1 == p1.type) and (type2 == p2.type)) or ((type1 == p2.type) and (type2 == p1.type)))):
+                            react(mol, p1, p2, toKill)
+                            continue
+
+                    p1.v, p2.v = newVelocity(p1, p2)
     else:
         for p1, p2 in combinations(particles, 2):
             if (mag(p1.pos - p2.pos) <= p1.radius + p2.radius) and (mag( (p1.pos + p1.v*dt) - (p2.pos + p2.v*dt) ) < mag(p1.pos - p2.pos)):
@@ -965,13 +964,13 @@ neighbourMaxShellBuffer = 2.2
 
 # Elements and Molecules
 # List of element to simulate (atomic number)
-elementsToSimulate = [1]
+elementsToSimulate = [1, 8]
 # List of molecules to simulate
-moleculesToSimulate = ['H2']
+moleculesToSimulate = ['H2', 'H20']
 # The amount of each element to simulate
-elementsCount = [300]
+elementsCount = [400, 200]
 # The amount of each molecule to simulate
-moleculesCount = [0]
+moleculesCount = [0, 0]
 # Total number of particles
 nParticles = sum(elementsCount) + sum(moleculesCount)
 
