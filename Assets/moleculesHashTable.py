@@ -16,8 +16,9 @@ def HEX2VEC(hex):
 
 # Dicionaries
 molecules = {
-    'H2': {'chance': .05, 'name-en': 'Hydrogen gas', 'name-pt': 'Gás hidrogênio', 'radii-empirical': 50, 'radii-calculated': 106, 'mass': 2.016, 'reagents': [1, 1], 'color': HEX2VEC('#32b82e')},
-    'H20': {'chance': .05, 'name-en': 'Water', 'name-pt': 'Água', 'radii-empirical': 75, 'radii-calculated': 150, 'mass': 18.01528, 'reagents': ['H2', 8], 'color': HEX2VEC('#0000ff')}
+    'H2': {'name-en': 'Hydrogen gas', 'name-pt': 'Gás hidrogênio', 'radii-empirical': 50, 'radii-calculated': 106, 'mass': 2.016, 'reagents-chance': [[1, 1, .05]], 'color': HEX2VEC('#32b82e')},
+    'OH': {'name-en': 'Hydroxil', 'name-pt': 'Hidroxila', 'radii-empirical': 50, 'radii-calculated': 106, 'mass': 2.016, 'reagents-chance': [[1, 8, .25]], 'color': HEX2VEC('#ff9999')},
+    'H20': {'name-en': 'Water', 'name-pt': 'Água', 'radii-empirical': 75, 'radii-calculated': 150, 'mass': 18.01528, 'reagents-chance': [['H2', 8, .01], ['OH', 1, .1]], 'color': HEX2VEC('#0000ff')}
 }
 
 

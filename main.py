@@ -588,19 +588,21 @@ def collision(particles:Iterable[list, numpy.array]) -> None:
     Args:
         particles: VPython Sphere object iterator, contains all particle objects in the simulation.
     '''
-    global nParticles
+    global nParticles, moleculesToSimulate
     toKill = []
 
     if neighbourImplementation:
         for p1 in particles:
             for p2 in p1.neighbours:
                 if (mag(p1.pos - p2.pos) <= p1.radius + p2.radius) and (mag( (p1.pos + p1.v*dt) - (p2.pos + p2.v*dt) ) < mag(p1.pos - p2.pos)):
-                    for mol in molecules:
-                        chance = molecules[mol]['chance']
-                        type1, type2 = molecules[mol]['reagents']
-                        if ((chance >= random()) and (((type1 == p1.type) and (type2 == p2.type)) or ((type1 == p2.type) and (type2 == p1.type)))):
-                            react(mol, p1, p2, toKill)
-                            continue
+                    for mol in moleculesToSimulate:
+                        try:
+                            for type1, type2, chance in molecules[mol]['reagents-chance']:
+                                if ((chance >= random()) and (((type1 == p1.type) and (type2 == p2.type)) or ((type1 == p2.type) and (type2 == p1.type)))):
+                                    react(mol, p1, p2, toKill)
+                                    continue
+                        except Exception as e:
+                            print(e)
 
                     p1.v, p2.v = newVelocity(p1, p2)
     else:
@@ -917,7 +919,7 @@ globalUpdateNeighbour = True
 
 # Wall variables
 # Size of each wall (Angstrom)
-side = 15
+side = 11
 # Thickness of each wall
 thickness = .5
 
@@ -966,11 +968,11 @@ neighbourMaxShellBuffer = 2.2
 # List of element to simulate (atomic number)
 elementsToSimulate = [1, 8]
 # List of molecules to simulate
-moleculesToSimulate = ['H2', 'H20']
+moleculesToSimulate = ['H20', 'OH']
 # The amount of each element to simulate
-elementsCount = [400, 200]
+elementsCount = [200, 100]
 # The amount of each molecule to simulate
-moleculesCount = [0, 0]
+moleculesCount = [0, 0, 0, 0]
 # Total number of particles
 nParticles = sum(elementsCount) + sum(moleculesCount)
 
