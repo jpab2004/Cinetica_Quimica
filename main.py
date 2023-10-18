@@ -269,16 +269,16 @@ def getRadiiElement(e:int) -> float:
     Returns:
         float, radius of the particle with given element.
     '''
-    f = lambda x: (exp(x/500) - .7) * radiiBuff
+    global radiiFunc
 
     if empiricalRadii:
         radii = elements[e]['radii-empirical']/1e2
     else:
         radii = elements[e]['radii-calculated']/1e2
 
-    if isnan(radii): return f(150)    
+    if isnan(radii): return radiiFunc(150)    
 
-    return f(radii)
+    return radiiFunc(radii)
 
 
 
@@ -291,16 +291,16 @@ def getRadiiMolecule(mol:str) -> float:
     Returns:
         float, radius of the particle with given element.
     '''
-    f = lambda x: (exp(x/500) - .7) * radiiBuff
+    global radiiFunc
 
     if empiricalRadii:
         radii = molecules[mol]['radii-empirical']/1e2
     else:
         radii = molecules[mol]['radii-calculated']/1e2
 
-    if isnan(radii): return f(150)    
+    if isnan(radii): return radiiFunc(150)    
 
-    return f(radii)
+    return radiiFunc(radii)
 
 
 
@@ -582,7 +582,29 @@ def react(mol:str, p1:sphere, p2:sphere, toKill:Iterable[list, numpy.array]) -> 
 
 
 
-def collision(particles:Iterable[list, numpy.array]) -> None:
+def colision(p1, p2, toKill):
+    '''Makes everything necessary for the collision.
+    
+    Args:
+        p1: VPython Sphere object, particle 1 of the collision;
+        p2: VPython Sphere object, particle 2 of the collision;
+        toKill: VPython Sphere object iterator, contains all particle objects to be killed.
+    '''
+
+    if (mag(p1.pos - p2.pos) <= p1.radius + p2.radius) and (mag( (p1.pos + p1.v*dt) - (p2.pos + p2.v*dt) ) < mag(p1.pos - p2.pos)):
+        for mol in moleculesToSimulate:
+            if molecules[mol]['delay'] >= manager['iterations']:
+                continue
+
+            for type1, type2, chance in molecules[mol]['reagents-chance']:
+                if ((chance >= random()) and (((type1 == p1.type) and (type2 == p2.type)) or ((type1 == p2.type) and (type2 == p1.type)))):
+                    react(mol, p1, p2, toKill)
+                    continue
+    
+        p1.v, p2.v = newVelocity(p1, p2)
+
+
+def collisionDetection(particles:Iterable[list, numpy.array]) -> None:
     '''Detects and applies collisions for all particles.
 
     Args:
@@ -594,22 +616,12 @@ def collision(particles:Iterable[list, numpy.array]) -> None:
     if neighbourImplementation:
         for p1 in particles:
             for p2 in p1.neighbours:
-                if (mag(p1.pos - p2.pos) <= p1.radius + p2.radius) and (mag( (p1.pos + p1.v*dt) - (p2.pos + p2.v*dt) ) < mag(p1.pos - p2.pos)):
-                    for mol in moleculesToSimulate:
-                        for type1, type2, chance in molecules[mol]['reagents-chance']:
-                            if ((chance >= random()) and (((type1 == p1.type) and (type2 == p2.type)) or ((type1 == p2.type) and (type2 == p1.type)))):
-                                react(mol, p1, p2, toKill)
-                                continue
-
-                    p1.v, p2.v = newVelocity(p1, p2)
+                colision(p1, p2, toKill)
     else:
         for p1, p2 in combinations(particles, 2):
             if (mag(p1.pos - p2.pos) <= p1.radius + p2.radius) and (mag( (p1.pos + p1.v*dt) - (p2.pos + p2.v*dt) ) < mag(p1.pos - p2.pos)):
-                if ((H2ReactionChance >= random()) and (p1.element == p2.element == 1)):
-                    toKill = react('H2', p1, p2, toKill)
-                else:
-                    p1.v, p2.v = newVelocity(p1, p2)
-
+                colision(p1, p2, toKill)
+    
     toKill = set(toKill)
     for p in toKill:
         p.visible = False
@@ -741,7 +753,7 @@ def stepSimulation():
 
     rate(fps)
     manager['runFunction'](particles)
-    collision(particles)
+    collisionDetection(particles)
 
     if manager['concentrationIterator'] >= loopConcentrationVerboseCount:
         updateConcentrations()
@@ -899,7 +911,7 @@ fps = 5000
 # Boltzmann Constant for calculations
 k = 1.380649e-23
 # Temperature of the simulation
-temperature = 100
+temperature = 300
 # Determine the language of the simulation
 portuguese = True
 # Global start variable (global manager)
@@ -916,7 +928,7 @@ globalUpdateNeighbour = True
 
 # Wall variables
 # Size of each wall (Angstrom)
-side = 11
+side = 7
 # Thickness of each wall
 thickness = .5
 
@@ -927,15 +939,15 @@ thickness = .5
 boxCorner = True
 # Makes particles have trails and their retain iterations
 makeTrails = False
-retainTrail = 10
+retainTrail = 5
 # Make particles emit light
 particleEmission = False
 # Make Vpython use prettier spheres
 prettySpheres = True
 # Defines if graphs use the fast implementation or not
-globalFastGraph = False
+globalFastGraph = True
 # Citing the theory curve to be imprecise
-scene.append_to_caption("A curva teórica apresentada de Boltzmann esta relacionada ao estado inicial da simulação")
+scene.append_to_caption("<br><b>Obs.:</b> A curva teórica apresentada de Boltzmann esta relacionada ao estado inicial da simulação")
 # Creating a line between graphs and controls
 scene.append_to_caption("<br><hr><br>")
 
@@ -945,7 +957,7 @@ scene.append_to_caption("<br><hr><br>")
 # Particle list initialization
 particles = []
 # Buffer for the radius size (graphics)
-radiiBuff = 1
+radiiFunc = lambda x: x/5 + .2
 # Buffer for generating the initial position of particles
 positionBuffer = .9*side
 # Bool for defining if particles start randomly scattered or on the center
@@ -965,9 +977,9 @@ neighbourMaxShellBuffer = 2.2
 # List of element to simulate (atomic number)
 elementsToSimulate = [1, 8]
 # List of molecules to simulate
-moleculesToSimulate = ['OH', 'H2', 'H2O']
+moleculesToSimulate = ['OH', 'H2O', 'H2O2']
 # The amount of each element to simulate
-elementsCount = [200, 100]
+elementsCount = [30, 15]
 # The amount of each molecule to simulate
 moleculesCount = [0, 0, 0]
 # Total number of particles
@@ -1001,23 +1013,22 @@ loopHistogramVerboseCount = 5
 # Reaction
 # Lit of all concentrations
 concentrations = {}
-# Chance for a reaction to happen
-H2ReactionChance = .25
 # Width and height of the concentration graph on the canvas
 conGraphWidth, conGraphHeight = 850, 300
 # Create a scrollable graph or not
 scrollableConGraph = True
-# Amount of loops to update the graph (optimization)
-loopConcentrationVerboseCount = 10
 # Concentration graph creation
 if scrollableConGraph:
-    conGraph = graph(title='Concentração dos elementos/moléculas na simulação', xtitle=f'Tempo (iterações/{loopConcentrationVerboseCount})',
+    conGraph = graph(title='Concentração dos elementos/moléculas na simulação', xtitle='Tempo (iterações)',
     ytitle='Concentração', fast=globalFastGraph, width=conGraphWidth, height=conGraphHeight, align='left', ymin=0, ymax=1,
-    background=vector(0, 0, 0), foreground=vector(0, 0, 0), scroll=True, xmin=0, xmax=fps)
+    background=vector(0, 0, 0), foreground=vector(0, 0, 0), scroll=True, xmin=0, xmax=3*fps)
 else:
-    conGraph = graph(title='Concentração dos elementos/moléculas na simulação', xtitle=f'Tempo (iterações/{loopConcentrationVerboseCount})',
+    conGraph = graph(title='Concentração dos elementos/moléculas na simulação', xtitle='Tempo (iterações)',
     ytitle='Concentração', fast=globalFastGraph, width=conGraphWidth, height=conGraphHeight, align='left', ymin=0, ymax=1,
     background=vector(0, 0, 0), foreground=vector(0, 0, 0))
+# Amount of loops to update the graph (optimization)
+loopConcentrationVerboseCount = 5
+
 
 
 # Running

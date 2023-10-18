@@ -16,9 +16,49 @@ def HEX2VEC(hex):
 
 # Dicionaries
 molecules = {
-    'H2': {'name-en': 'Hydrogen gas', 'name-pt': 'Gás hidrogênio', 'radii-empirical': 50, 'radii-calculated': 106, 'mass': 2.016, 'reagents-chance': [[1, 1, .05]], 'color': HEX2VEC('#32b82e')},
-    'OH': {'name-en': 'Hydroxy group', 'name-pt': 'Hidroxila', 'radii-empirical': 97, 'radii-calculated': 101, 'mass': 17.00684, 'reagents-chance': [[1, 8, .25]], 'color': HEX2VEC('#ff9999')},
-    'H2O': {'name-en': 'Water', 'name-pt': 'Água', 'radii-empirical': 75, 'radii-calculated': 150, 'mass': 18.01528, 'reagents-chance': [['H2', 8, .01], ['OH', 1, .1]], 'color': HEX2VEC('#0000ff')}
+    'H2': {
+        'name-en': 'Hydrogen gas',
+        'name-pt': 'Gás hidrogênio',
+        'radii-empirical': 50,
+        'radii-calculated': 106,
+        'mass': 2.016,
+        'delay': 300,
+        'reagents-chance': [[1, 1, .025]],
+        'color': HEX2VEC('#32b82e')
+    },
+
+    'OH': {
+        'name-en': 'Hydroxy group',
+        'name-pt': 'Hidroxila',
+        'radii-empirical': 50,
+        'radii-calculated': 101,
+        'mass': 17.00684,
+        'delay': 300,
+        'reagents-chance': [[1, 8, .05]],
+        'color': HEX2VEC('#ff9999')
+    },
+    
+    'H2O': {
+        'name-en': 'Water',
+        'name-pt': 'Água',
+        'radii-empirical': 110,
+        'radii-calculated': 150,
+        'mass': 18.01528,
+        'delay': 2000,
+        'reagents-chance': [['H2', 8, .1], ['OH', 1, .1]],
+        'color': HEX2VEC('#0000ff')
+    },
+
+    'H2O2': {
+        'name-en': 'Hydrogen peroxide',
+        'name-pt': 'Peróxido de hidrogênio',
+        'radii-empirical': 160,
+        'radii-calculated': 250,
+        'mass': 34.014,
+        'delay': 6000,
+        'reagents-chance': [['H2O', 8, .1]],
+        'color': HEX2VEC('#7777ff')
+    }
 }
 
 
