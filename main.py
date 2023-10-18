@@ -486,16 +486,16 @@ def generateParticlesAndCurves(d3):
     Args:
         d3: bool, True if the simulation is 3-Dimensional, false else.
     '''
-    global elements, elementsToSimulate, elementsCount, molecules, moleculesToSimulate, moleculesCount, globalTheoryCurve, particles
+    global elements, elementsToSimulate, elementsCount, molecules, moleculesToSimulate, moleculesCount, globalTheoryCurve, particles, showHistogram
 
     for element, count in zip(elementsToSimulate, elementsCount):
-        if globalTheoryCurve: generateTheoryCurveElement(element, count)
+        if ((showHistogram) and (globalTheoryCurve)): generateTheoryCurveElement(element, count)
         for _ in range(count):
             particle = generateElement(element, d3)
             particles.append(particle)
 
     for mol, count in zip(moleculesToSimulate, moleculesCount):
-        if globalTheoryCurve: generateTheoryCurveMolecule(mol, count)
+        if ((showHistogram) and (globalTheoryCurve)): generateTheoryCurveMolecule(mol, count)
         for _ in range(count):
             particle = generateMolecule(mol, d3)
             particles.append(particle)
@@ -747,6 +747,8 @@ def step2D(particles:Iterable[list, numpy.array]) -> None:
 #===============================================================================================#
 def stepSimulation():
     '''Make 1 step in the simulation globaly.'''
+    global showHistogram, showConcentrations
+
     if ((neighbourImplementation) and (globalUpdateNeighbour) and (manager['neighbourIterator'] >= loopNeighboursCount)):
         updateNeighboursAllParticles(particles)
         manager['neighbourIterator'] = 1
@@ -755,10 +757,10 @@ def stepSimulation():
     manager['runFunction'](particles)
     collisionDetection(particles)
 
-    if manager['concentrationIterator'] >= loopConcentrationVerboseCount:
+    if ((showConcentrations) and (manager['concentrationIterator'])) >= loopConcentrationVerboseCount:
         updateConcentrations()
         manager['concentrationIterator'] = 1
-    if manager['histogramIterator'] >= loopHistogramVerboseCount:
+    if ((showHistogram) and (manager['histogramIterator'])) >= loopHistogramVerboseCount:
         drawHist(particles)
         manager['histogramIterator'] = 1
 
@@ -923,6 +925,10 @@ neighbourImplementation = True
 # Define if neighbours are update together or separetly (global manager)
 # DO NOT CHANGE!!! NOT IMPLEMENTED CORRECTLY! WILL MAKE SIMULATION RUN SLOWER (MUCH SLOWER)!
 globalUpdateNeighbour = True
+# Defines if the histogram and velocities graph is created and shown
+showHistogram = True
+# Defines if the concentrations graph is created and shown
+showConcentrations = True
 
 
 
@@ -979,7 +985,7 @@ elementsToSimulate = [1, 8]
 # List of molecules to simulate
 moleculesToSimulate = ['OH', 'H2O', 'H2O2']
 # The amount of each element to simulate
-elementsCount = [30, 15]
+elementsCount = [45, 30]
 # The amount of each molecule to simulate
 moleculesCount = [0, 0, 0]
 # Total number of particles
@@ -1004,7 +1010,6 @@ velGraph = graph(title='Velocidade das partículas na simulação', xtitle='Velo
                 align='left', background=vector(0, 0, 0), foreground=vector(0, 0, 0))
 # Velocities graph initialization
 velBars = gvbars(delta=dv, color=HEX2VEC('#00ff00'), label='Número de Partículas', graph=velGraph)
-velBars.plot(0, 0)
 # Amount of loops to update the graph (optimization)
 loopHistogramVerboseCount = 5
 
