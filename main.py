@@ -928,12 +928,15 @@ globalUpdateNeighbour = True
 showHistogram = True
 # Defines if the concentrations graph is created and shown
 showConcentrations = True
+# Define the stop simulation iteration
+globalFitCurveStop = True
+fitCurveStopDelay = 2500
 
 
 
 # Wall variables
 # Size of each wall (Angstrom)
-side = 9
+side = 8
 # Thickness of each wall
 thickness = .5
 
@@ -950,7 +953,7 @@ particleEmission = False
 # Make Vpython use prettier spheres
 prettySpheres = True
 # Defines if graphs use the fast implementation or not
-globalFastGraph = True
+globalFastGraph = False
 # Citing the theory curve to be imprecise
 scene.append_to_caption("<br><b>Obs.:</b> A curva teórica apresentada de Boltzmann esta relacionada ao estado inicial da simulação")
 # Creating a line between graphs and controls
@@ -984,7 +987,7 @@ elementsToSimulate = [1]
 # List of molecules to simulate
 moleculesToSimulate = ['H2']
 # The amount of each element to simulate
-elementsCount = [600]
+elementsCount = [300]
 # The amount of each molecule to simulate
 moleculesCount = [0]
 # Total number of particles
