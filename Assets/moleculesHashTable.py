@@ -22,8 +22,8 @@ molecules = {
         'radii-empirical': 50,
         'radii-calculated': 106,
         'mass': 2.016,
-        'delay': 300,
-        'reagents-chance': [[1, 1, .025]],
+        'delay': 0,
+        'reagents-chance': [[1, 1, .1]],
         'color': HEX2VEC('#32b82e')
     },
 
@@ -33,8 +33,8 @@ molecules = {
         'radii-empirical': 50,
         'radii-calculated': 101,
         'mass': 17.00684,
-        'delay': 300,
-        'reagents-chance': [[1, 8, .05]],
+        'delay': 0,
+        'reagents-chance': [[1, 8, .1]],
         'color': HEX2VEC('#ff9999')
     },
     
@@ -44,7 +44,7 @@ molecules = {
         'radii-empirical': 110,
         'radii-calculated': 150,
         'mass': 18.01528,
-        'delay': 2000,
+        'delay': 0,
         'reagents-chance': [['H2', 8, .1], ['OH', 1, .1]],
         'color': HEX2VEC('#0000ff')
     },
@@ -55,7 +55,7 @@ molecules = {
         'radii-empirical': 160,
         'radii-calculated': 250,
         'mass': 34.014,
-        'delay': 6000,
+        'delay': 0,
         'reagents-chance': [['H2O', 8, .1]],
         'color': HEX2VEC('#7777ff')
     }

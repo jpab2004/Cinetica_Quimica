@@ -24,7 +24,7 @@ from time import sleep
 from vpython import *
 
 # Array support
-import numpy
+from numpy import array
 
 
 
@@ -168,7 +168,7 @@ def getHist(v:float) -> int:
 
 
 
-def drawHist(particles:Iterable[list, numpy.array]) -> None:
+def drawHist(particles:Iterable[list, array]) -> None:
     '''Generates and plots the histogram of velocities of the simulation.
 
     Args:
@@ -408,7 +408,7 @@ def generateElement(e:int, d3:bool=True) -> sphere:
     particleVelocity = generateVelocity(particleMass, d3)/particleMass
 
     still = True
-    positions = list(map(getPositionAndRadius, particles))
+    positions = list(map(getPositionAndRadius, globalParticles))
     while (still):
         still = False
         particlePosition = generatePosition(d3)
@@ -453,7 +453,7 @@ def generateMolecule(mol:str, d3:bool=True) -> sphere:
     particleVelocity = generateVelocity(particleMass, d3)/particleMass
 
     still = True
-    positions = list(map(getPositionAndRadius, particles))
+    positions = list(map(getPositionAndRadius, globalParticles))
     while (still):
         still = False
         particlePosition = generatePosition(d3)
@@ -486,19 +486,19 @@ def generateParticlesAndCurves(d3):
     Args:
         d3: bool, True if the simulation is 3-Dimensional, false else.
     '''
-    global elements, elementsToSimulate, elementsCount, molecules, moleculesToSimulate, moleculesCount, globalTheoryCurve, particles, showHistogram
+    global elements, elementsToSimulate, elementsCount, molecules, moleculesToSimulate, moleculesCount, globalTheoryCurve, globalParticles, showHistogram
 
     for element, count in zip(elementsToSimulate, elementsCount):
         if ((showHistogram) and (globalTheoryCurve)): generateTheoryCurveElement(element, count)
         for _ in range(count):
             particle = generateElement(element, d3)
-            particles.append(particle)
+            globalParticles.append(particle)
 
     for mol, count in zip(moleculesToSimulate, moleculesCount):
         if ((showHistogram) and (globalTheoryCurve)): generateTheoryCurveMolecule(mol, count)
         for _ in range(count):
             particle = generateMolecule(mol, d3)
-            particles.append(particle)
+            globalParticles.append(particle)
     
     return
 
@@ -543,7 +543,7 @@ def newVelocity(p1:sphere, p2:sphere) -> tuple[vector, vector]:
 
 
 
-def react(mol:str, p1:sphere, p2:sphere, toKill:Iterable[list, numpy.array]) -> Iterable[list, numpy.array]:
+def react(mol:str, p1:sphere, p2:sphere, toKill:Iterable[list, array]) -> Iterable[list, array]:
     '''Reacts two particles to make a molecule.
     
     Args:
@@ -604,7 +604,7 @@ def colision(p1, p2, toKill):
         p1.v, p2.v = newVelocity(p1, p2)
 
 
-def collisionDetection(particles:Iterable[list, numpy.array]) -> None:
+def collisionDetection(particles:Iterable[list, array]) -> None:
     '''Detects and applies collisions for all particles.
 
     Args:
@@ -624,11 +624,10 @@ def collisionDetection(particles:Iterable[list, numpy.array]) -> None:
     
     toKill = set(toKill)
     for p in toKill:
-        p.visible = False
-        p.vel = vector(0,0,0)
         p.clear_trail()
         particles.remove(p)
         nParticles -= 1
+        p.visible = False
         del p
     
     return
@@ -648,7 +647,7 @@ def updateConcentrations():
 
 
 
-def updateNeighbours(p1:sphere, particles:Iterable[list, numpy.array]) -> None:
+def updateNeighbours(p1:sphere, particles:Iterable[list, array]) -> None:
     '''Updates the neighbours of 1 particle.
     
     Args:
@@ -667,7 +666,7 @@ def updateNeighbours(p1:sphere, particles:Iterable[list, numpy.array]) -> None:
 
 
 
-def updateNeighboursAllParticles(particles:Iterable[list, numpy.array]) -> None:
+def updateNeighboursAllParticles(particles:Iterable[list, array]) -> None:
     '''Updates the neighbours of each particles.
     
     Args:
@@ -686,7 +685,7 @@ def updateNeighboursAllParticles(particles:Iterable[list, numpy.array]) -> None:
 #===============================================================================================#
 #                                          3D Functions                                         #
 #===============================================================================================#
-def step3D(particles:Iterable[list, numpy.array]) -> None:
+def step3D(particles:Iterable[list, array]) -> None:
     '''Function to calculate next step of the simulation for 3D simulations.
 
     Args:
@@ -715,7 +714,7 @@ def step3D(particles:Iterable[list, numpy.array]) -> None:
 #===============================================================================================#
 #                                          2D Functions                                         #
 #===============================================================================================#
-def step2D(particles:Iterable[list, numpy.array]) -> None:
+def step2D(particles:Iterable[list, array]) -> None:
     '''Function to calculate next step of the simulation for 2D simulations.
 
     Args:
@@ -750,18 +749,18 @@ def stepSimulation():
     global showHistogram, showConcentrations
 
     if ((neighbourImplementation) and (globalUpdateNeighbour) and (manager['neighbourIterator'] >= loopNeighboursCount)):
-        updateNeighboursAllParticles(particles)
+        updateNeighboursAllParticles(globalParticles)
         manager['neighbourIterator'] = 1
 
     rate(fps)
-    manager['runFunction'](particles)
-    collisionDetection(particles)
+    manager['runFunction'](globalParticles)
+    collisionDetection(globalParticles)
 
     if ((showConcentrations) and (manager['concentrationIterator'])) >= loopConcentrationVerboseCount:
         updateConcentrations()
         manager['concentrationIterator'] = 1
     if ((showHistogram) and (manager['histogramIterator'])) >= loopHistogramVerboseCount:
-        drawHist(particles)
+        drawHist(globalParticles)
         manager['histogramIterator'] = 1
 
     manager['histogramIterator'] += 1
@@ -854,7 +853,7 @@ def resumeSimulation():
 
 def stepSimulationNTimes():
     '''Make n step in the simulation globaly.'''
-    global particles, manager, stepSimulationButton, resumeSimulationButton
+    global globalParticles, manager, stepSimulationButton, resumeSimulationButton
 
     stepSimulationButton.disabled = True
     resumeSimulationButton.disabled = True
@@ -934,7 +933,7 @@ showConcentrations = True
 
 # Wall variables
 # Size of each wall (Angstrom)
-side = 7
+side = 9
 # Thickness of each wall
 thickness = .5
 
@@ -961,7 +960,7 @@ scene.append_to_caption("<br><hr><br>")
 
 # Particle variables
 # Particle list initialization
-particles = []
+globalParticles = []
 # Buffer for the radius size (graphics)
 radiiFunc = lambda x: x/5 + .2
 # Buffer for generating the initial position of particles
@@ -981,13 +980,13 @@ neighbourMaxShellBuffer = 2.2
 
 # Elements and Molecules
 # List of element to simulate (atomic number)
-elementsToSimulate = [1, 8]
+elementsToSimulate = [1]
 # List of molecules to simulate
-moleculesToSimulate = ['OH', 'H2O', 'H2O2']
+moleculesToSimulate = ['H2']
 # The amount of each element to simulate
-elementsCount = [45, 30]
+elementsCount = [600]
 # The amount of each molecule to simulate
-moleculesCount = [0, 0, 0]
+moleculesCount = [0]
 # Total number of particles
 nParticles = sum(elementsCount) + sum(moleculesCount)
 
