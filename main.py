@@ -16,7 +16,6 @@ from random import uniform, random
 
 # Array support
 from numpy import array, linspace
-import numpy as np
 
 # Function to load element data for the simulation
 from pickle import load
@@ -836,8 +835,6 @@ def run(d3:bool=True) -> None:
             while(not paused):
                 stepSimulation()
         sleep(.1)
-    
-    return
 
 
 
