@@ -2,6 +2,9 @@
 #                                             Setup                                             #
 #===============================================================================================#
 # Libraries
+# Array support
+from numpy import array, linspace, inf
+
 # Iterable annotations
 from collections.abc import Iterable
 
@@ -13,9 +16,6 @@ from itertools import combinations
 
 # Function to generate pseudorandom numbers equally distributed
 from random import uniform, random
-
-# Array support
-from numpy import array, linspace
 
 # Function to load element data for the simulation
 from pickle import load
@@ -82,7 +82,8 @@ def HEX2VEC(hex):
     r, g, b = tuple(int(hex[i:i+2], 16) for i in (0, 2, 4))
     return RGB2VEC(r, g, b)
 
-fitFunction1X = lambda xs, a, b, c, d: [a/(b*x**c + 1) + d for x in xs]
+fitFunction1X = lambda xs, a, b: [1/(a*x**b + 1) for x in xs]
+fitFunctionInverted1X = lambda xs, a, b: [-1/(a*x**b + 1) + 1 for x in xs]
 
 
 
@@ -483,15 +484,15 @@ def generateParticlesAndCurves(d3):
     Args:
         d3: bool, True if the simulation is 3-Dimensional, false else.
     '''
-    global elements, elementsToSimulate, elementsCount, molecules, moleculesToSimulate, moleculesCount, globalTheoryCurve, globalParticles, showHistogram
+    global elements, elementsToSimulate, molecules, moleculesToSimulate, globalTheoryCurve, globalParticles, showHistogram
 
-    for element, count in zip(elementsToSimulate, elementsCount):
+    for element, count in elementsToSimulate.items():
         if ((showHistogram) and (globalTheoryCurve)): generateTheoryCurveElement(element, count)
         for _ in range(count):
             particle = generateElement(element, d3)
             globalParticles.append(particle)
 
-    for mol, count in zip(moleculesToSimulate, moleculesCount):
+    for mol, count in moleculesToSimulate.items():
         if ((showHistogram) and (globalTheoryCurve)): generateTheoryCurveMolecule(mol, count)
         for _ in range(count):
             particle = generateMolecule(mol, d3)
@@ -503,12 +504,12 @@ def generateParticlesAndCurves(d3):
 
 def generateConcentrations():
     global concentrations, nParticles, conGraph, language
-    global elements, elementsToSimulate, elementsCount, molecules, moleculesToSimulate, moleculesCount
+    global elements, elementsToSimulate, molecules, moleculesToSimulate
 
-    for e, count in zip(elementsToSimulate, elementsCount):
+    for e, count in elementsToSimulate.items():
         curve = gcurve(graph=conGraph, color=elements[e]['color'], label=elements[e][language])
         concentrations[e] = [count, curve]
-    for mol, count in zip(moleculesToSimulate, moleculesCount):
+    for mol, count in moleculesToSimulate.items():
         curve = gcurve(graph=conGraph, color=molecules[mol]['color'], label=molecules[mol][language])
         concentrations[mol] = [count, curve]
 
@@ -701,11 +702,11 @@ def fitGraph():
     '''Fits the graph of the concentrations of the simulation.'''
     global concentrations, particlesToFit
 
-    for p, (curveType, initial) in particlesToFit.items():
+    for p, (curveType, initial, bounds) in particlesToFit.items():
         x = [i[0] for i in concentrations[p][-1].data]
         y = [i[1] for i in concentrations[p][-1].data]
 
-        opt, cov, dic, mesg, ier = curve_fit(curveType, x, y, p0=initial, full_output=True)
+        opt, cov, dic, mesg, ier = curve_fit(curveType, x, y, p0=initial, full_output=True, bounds=bounds)
 
         params = [p, curveType, opt, [x, y]]
         createFitCurve(params)
@@ -966,7 +967,7 @@ showConcentrations = generateTheoryCurveElement
 
 # Wall variables
 # Size of each wall (Angstrom)
-side = 10
+side = 15
 # Thickness of each wall
 thickness = .5
 
@@ -1005,7 +1006,7 @@ positionBuffer = .9*side
 randomPosition = True
 # Bool for defining use of empirical radii or calculated radii
 empiricalRadii = True
-# Amount of loops to update the list of neighbours of each particle (DOES NOT WORK WITH LOW NUMBERS)
+# Amount of loops to update the list of neighbours of each particle (75 seens good for most pruposes) (DOES NOT WORK WITH LOW NUMBERS)
 loopNeighboursCount = 75
 # Size of the neighbour shell
 neighbourShellBuffer = 1.5
@@ -1016,15 +1017,11 @@ neighbourMaxShellBuffer = 2.2
 
 # Elements and Molecules
 # List of element to simulate (atomic number)
-elementsToSimulate = [1]
+elementsToSimulate = {1: 500}
 # List of molecules to simulate
-moleculesToSimulate = ['H2']
-# The amount of each element to simulate
-elementsCount = [600]
-# The amount of each molecule to simulate
-moleculesCount = [0]
+moleculesToSimulate = {'H2': 0}
 # Total number of particles
-nParticles = sum(elementsCount) + sum(moleculesCount)
+nParticles = sum(elementsToSimulate.values()) + sum(moleculesToSimulate.values())
 
 
 
@@ -1061,7 +1058,7 @@ scrollableConGraph = True
 if scrollableConGraph:
     conGraph = graph(title='Concentração dos elementos/moléculas na simulação', xtitle='Tempo (iterações)',
     ytitle='Concentração', fast=globalFastGraph, width=conGraphWidth, height=conGraphHeight, align='left', ymin=0, ymax=1,
-    background=globalGraphBackgroundColor, foreground=globalGraphForegroundColor, scroll=True, xmin=0, xmax=3*fps)
+    background=globalGraphBackgroundColor, foreground=globalGraphForegroundColor, scroll=True, xmin=0, xmax=4*fps)
 else:
     conGraph = graph(title='Concentração dos elementos/moléculas na simulação', xtitle='Tempo (iterações)',
     ytitle='Concentração', fast=globalFastGraph, width=conGraphWidth, height=conGraphHeight, align='left', ymin=0, ymax=1,
@@ -1079,8 +1076,8 @@ fitCurveStopDelay = 1e4
 globalGdotRadius = 1
 # Defining the particles to fit
 particlesToFit = {
-    1: (fitFunction1X, [1, .002, 1, 0]),
-    'H2': (fitFunction1X, [-1, .002, 1, 1])
+    1: (fitFunction1X, [.002, 1.3], ([-inf, -inf], [inf, inf])),
+    'H2': (fitFunctionInverted1X, [.002, 1.3], ([-inf, -inf], [inf, inf]))
 }
 # Creating the graph
 if globalFitCurveStop:
