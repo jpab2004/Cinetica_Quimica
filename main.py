@@ -82,7 +82,7 @@ def HEX2VEC(hex):
     r, g, b = tuple(int(hex[i:i+2], 16) for i in (0, 2, 4))
     return RGB2VEC(r, g, b)
 
-fitFunction1X = lambda xs, a, b, c: [a/(b*x + 1) + c for x in xs]
+fitFunction1X = lambda xs, a, b, c, d: [a/(b*x**c + 1) + d for x in xs]
 
 
 
@@ -966,7 +966,7 @@ showConcentrations = generateTheoryCurveElement
 
 # Wall variables
 # Size of each wall (Angstrom)
-side = 8
+side = 10
 # Thickness of each wall
 thickness = .5
 
@@ -1020,7 +1020,7 @@ elementsToSimulate = [1]
 # List of molecules to simulate
 moleculesToSimulate = ['H2']
 # The amount of each element to simulate
-elementsCount = [300]
+elementsCount = [600]
 # The amount of each molecule to simulate
 moleculesCount = [0]
 # Total number of particles
@@ -1079,8 +1079,8 @@ fitCurveStopDelay = 1e4
 globalGdotRadius = 1
 # Defining the particles to fit
 particlesToFit = {
-    1: (fitFunction1X, [1, .002, 0]),
-    'H2': (fitFunction1X, [-1, .002, 1])
+    1: (fitFunction1X, [1, .002, 1, 0]),
+    'H2': (fitFunction1X, [-1, .002, 1, 1])
 }
 # Creating the graph
 if globalFitCurveStop:
