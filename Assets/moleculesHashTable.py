@@ -23,7 +23,7 @@ molecules = {
         'radii-calculated': 106,
         'mass': 2.016,
         'delay': 0,
-        'reagents-chance': [[1, 1, .025]],
+        'reagents-chance': [[1, 1, .05]],
         'color': HEX2VEC('#32b82e')
     },
 
@@ -58,6 +58,17 @@ molecules = {
         'delay': 0,
         'reagents-chance': [['H2O', 8, .025]],
         'color': HEX2VEC('#7777ff')
+    },
+
+    'E': {
+        'name-en': 'Extensorium',
+        'name-pt': 'Extensorium',
+        'radii-empirical': 250,
+        'radii-calculated': 400,
+        'mass': 200,
+        'delay': 0,
+        'reagents-chance': [[92, 94, 1]],
+        'color': HEX2VEC('#e6cf09')
     }
 }
 

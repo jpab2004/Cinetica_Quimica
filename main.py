@@ -5,11 +5,18 @@
 # Iterable annotations
 from collections.abc import Iterable
 
+# Curve fitting
+from scipy.optimize import curve_fit
+
 # Library for combinations of particles without repetition
 from itertools import combinations
 
 # Function to generate pseudorandom numbers equally distributed
 from random import uniform, random
+
+# Array support
+from numpy import array, linspace
+import numpy as np
 
 # Function to load element data for the simulation
 from pickle import load
@@ -22,9 +29,6 @@ from time import sleep
 
 # Importing of all VPython tools (graphic library)
 from vpython import *
-
-# Array support
-from numpy import array
 
 
 
@@ -51,7 +55,7 @@ manager = {
     'histogramIterator': 1,
     'neighbourIterator': 1,
     'concentrationIterator': 1,
-    'iterations': 0
+    'iterations': 1
 }
 
 
@@ -79,6 +83,8 @@ def HEX2VEC(hex):
     r, g, b = tuple(int(hex[i:i+2], 16) for i in (0, 2, 4))
     return RGB2VEC(r, g, b)
 
+fitFunction1X = lambda xs, a, b, c: [a/(b*x + 1) + c for x in xs]
+
 
 
 #===============================================================================================#
@@ -91,13 +97,9 @@ def generateTheoryCurveElement(e:int, nParticlesTheory:int) -> None:
         e: int, element atomic number;
         nParticlesTheory: int, number of particles for the specified element.
     '''
-    global velGraph, portuguese
+    global velGraph, language
 
-    if portuguese:
-        theory = gcurve(color=elements[e]['color'], label=elements[e]['name-pt'], graph=velGraph)
-    else:
-        theory = gcurve(color=elements[e]['color'], label=elements[e]['name-en'], graph=velGraph)
-        
+    theory = gcurve(color=elements[e]['color'], label=elements[e][language], graph=velGraph)
     mass = generateMassElement(e)
 
     deltaV = 10
@@ -120,13 +122,9 @@ def generateTheoryCurveMolecule(mol:str, nParticlesTheory:int) -> None:
         mol: str, molecule;
         nParticlesTheory: int, number of particles for the specified molecule.
     '''
-    global velGraph, portuguese
+    global velGraph, language
 
-    if portuguese:
-        theory = gcurve(color=molecules[mol]['color'], label=molecules[mol]['name-pt'], graph=velGraph)
-    else:
-        theory = gcurve(color=molecules[mol]['color'], label=molecules[mol]['name-en'], graph=velGraph)
-        
+    theory = gcurve(color=molecules[mol]['color'], label=molecules[mol][language], graph=velGraph)    
     mass = generateMassMolecule(mol)
 
     deltaV = 10
@@ -505,19 +503,14 @@ def generateParticlesAndCurves(d3):
 
 
 def generateConcentrations():
-    global concentrations, nParticles, conGraph, portuguese
+    global concentrations, nParticles, conGraph, language
     global elements, elementsToSimulate, elementsCount, molecules, moleculesToSimulate, moleculesCount
 
-    if portuguese:
-        name = 'name-pt'
-    else:
-        name = 'name-en'
-
     for e, count in zip(elementsToSimulate, elementsCount):
-        curve = gcurve(graph=conGraph, color=elements[e]['color'], label=elements[e][name])
+        curve = gcurve(graph=conGraph, color=elements[e]['color'], label=elements[e][language])
         concentrations[e] = [count, curve]
     for mol, count in zip(moleculesToSimulate, moleculesCount):
-        curve = gcurve(graph=conGraph, color=molecules[mol]['color'], label=molecules[mol][name])
+        curve = gcurve(graph=conGraph, color=molecules[mol]['color'], label=molecules[mol][language])
         concentrations[mol] = [count, curve]
 
 
@@ -641,8 +634,6 @@ def updateConcentrations():
     for count, curve in concentrations.values():
         curve.plot(manager['iterations'], count/nParticles)
 
-    manager['iterations'] += 1
-
     return
 
 
@@ -679,6 +670,46 @@ def updateNeighboursAllParticles(particles:Iterable[list, array]) -> None:
             p2.neighbours.append(p1)
 
     return
+
+
+
+def createFitCurve(params):
+    '''Creates a fit graph of the simulation.
+    
+    Args:
+        params: list, the parameters of the fit curve.
+    '''
+    global fittingGraph, language, fitCurveStopDelay, globalGdotRadius
+
+    particleType, curveType, optParams, (x, y) = params
+
+    if particleType in elements:
+        fittedCurve = gcurve(color=elements[particleType]['color'], label=elements[particleType][language], graph=fittingGraph)
+        dotsCurve = gdots(color=elements[particleType]['color'], graph=fittingGraph, radius=globalGdotRadius)
+    elif particleType in molecules:
+        fittedCurve = gcurve(color=molecules[particleType]['color'], label=molecules[particleType][language], graph=fittingGraph)
+        dotsCurve = gdots(color=molecules[particleType]['color'], graph=fittingGraph, radius=globalGdotRadius)
+
+    fittedXs = linspace(0, fitCurveStopDelay, num=500)
+    fittedYs = curveType(x, *optParams)
+
+    fittedCurve.plot([[x, y] for x, y in zip(fittedXs, fittedYs)])
+    dotsCurve.plot([[x, y] for (x, y) in zip(x, y)])
+
+
+
+def fitGraph():
+    '''Fits the graph of the concentrations of the simulation.'''
+    global concentrations, particlesToFit
+
+    for p, (curveType, initial) in particlesToFit.items():
+        x = [i[0] for i in concentrations[p][-1].data]
+        y = [i[1] for i in concentrations[p][-1].data]
+
+        opt, cov, dic, mesg, ier = curve_fit(curveType, x, y, p0=initial, full_output=True)
+
+        params = [p, curveType, opt, [x, y]]
+        createFitCurve(params)
 
 
 
@@ -746,7 +777,7 @@ def step2D(particles:Iterable[list, array]) -> None:
 #===============================================================================================#
 def stepSimulation():
     '''Make 1 step in the simulation globaly.'''
-    global showHistogram, showConcentrations
+    global showHistogram, showConcentrations, manager, globalFitCurveStop, fitCurveStopDelay, particlesToFit
 
     if ((neighbourImplementation) and (globalUpdateNeighbour) and (manager['neighbourIterator'] >= loopNeighboursCount)):
         updateNeighboursAllParticles(globalParticles)
@@ -762,10 +793,15 @@ def stepSimulation():
     if ((showHistogram) and (manager['histogramIterator'])) >= loopHistogramVerboseCount:
         drawHist(globalParticles)
         manager['histogramIterator'] = 1
+    if ((globalFitCurveStop) and (manager['iterations'] >= fitCurveStopDelay)):
+        fitGraph()
+        globalFitCurveStop = False
 
     manager['histogramIterator'] += 1
     manager['concentrationIterator'] += 1
     if (neighbourImplementation): manager['neighbourIterator'] += 1
+
+    manager['iterations'] += 1
 
     return
 
@@ -914,7 +950,7 @@ k = 1.380649e-23
 # Temperature of the simulation
 temperature = 300
 # Determine the language of the simulation
-portuguese = True
+language = 'name-pt'
 # Global start variable (global manager)
 globalStart = False
 # Global pause variable (global manager)
@@ -925,12 +961,9 @@ neighbourImplementation = True
 # DO NOT CHANGE!!! NOT IMPLEMENTED CORRECTLY! WILL MAKE SIMULATION RUN SLOWER (MUCH SLOWER)!
 globalUpdateNeighbour = True
 # Defines if the histogram and velocities graph is created and shown
-showHistogram = True
+showHistogram = False
 # Defines if the concentrations graph is created and shown
-showConcentrations = True
-# Define the stop simulation iteration
-globalFitCurveStop = True
-fitCurveStopDelay = 2500
+showConcentrations = generateTheoryCurveElement
 
 
 
@@ -954,6 +987,9 @@ particleEmission = False
 prettySpheres = True
 # Defines if graphs use the fast implementation or not
 globalFastGraph = False
+# Define the graph background and foreground color
+globalGraphBackgroundColor = HEX2VEC('#BBBBBB')
+globalGraphForegroundColor = HEX2VEC('#000000')
 # Citing the theory curve to be imprecise
 scene.append_to_caption("<br><b>Obs.:</b> A curva teórica apresentada de Boltzmann esta relacionada ao estado inicial da simulação")
 # Creating a line between graphs and controls
@@ -1009,9 +1045,9 @@ histData = [(v*dv + .5*dv, 0) for v in range(int(maxVel/dv))]
 # Velocities graph creation
 velGraph = graph(title='Velocidade das partículas na simulação', xtitle='Velocidade (m/s)', xmax=maxVel,
                 ymax=1, ytitle='Densidade de Probabilidade', fast=globalFastGraph, width=velGraphWidth, height=velGraphHeight,
-                align='left', background=vector(0, 0, 0), foreground=vector(0, 0, 0))
+                align='left', background=globalGraphBackgroundColor, foreground=globalGraphForegroundColor)
 # Velocities graph initialization
-velBars = gvbars(delta=dv, color=HEX2VEC('#00ff00'), label='Número de Partículas', graph=velGraph)
+velBars = gvbars(delta=dv, color=HEX2VEC('#ff0000'), label='Número de Partículas', graph=velGraph)
 # Amount of loops to update the graph (optimization)
 loopHistogramVerboseCount = 5
 
@@ -1028,13 +1064,32 @@ scrollableConGraph = True
 if scrollableConGraph:
     conGraph = graph(title='Concentração dos elementos/moléculas na simulação', xtitle='Tempo (iterações)',
     ytitle='Concentração', fast=globalFastGraph, width=conGraphWidth, height=conGraphHeight, align='left', ymin=0, ymax=1,
-    background=vector(0, 0, 0), foreground=vector(0, 0, 0), scroll=True, xmin=0, xmax=3*fps)
+    background=globalGraphBackgroundColor, foreground=globalGraphForegroundColor, scroll=True, xmin=0, xmax=3*fps)
 else:
     conGraph = graph(title='Concentração dos elementos/moléculas na simulação', xtitle='Tempo (iterações)',
     ytitle='Concentração', fast=globalFastGraph, width=conGraphWidth, height=conGraphHeight, align='left', ymin=0, ymax=1,
-    background=vector(0, 0, 0), foreground=vector(0, 0, 0))
+    background=globalGraphBackgroundColor, foreground=globalGraphForegroundColor)
 # Amount of loops to update the graph (optimization)
-loopConcentrationVerboseCount = 5
+loopConcentrationVerboseCount = 20
+
+
+
+# Curve fitting
+# Define the stop simulation iteration
+globalFitCurveStop = True
+fitCurveStopDelay = 1e4
+# Defining the global size of plots
+globalGdotRadius = 1
+# Defining the particles to fit
+particlesToFit = {
+    1: (fitFunction1X, [1, .002, 0]),
+    'H2': (fitFunction1X, [-1, .002, 1])
+}
+# Creating the graph
+if globalFitCurveStop:
+    fittingGraph = graph(title='Fit das concentrações na simulação', xtitle='Tempo (iterações)',
+    ytitle='Concentração', fast=globalFastGraph, width=conGraphWidth, height=conGraphHeight, align='left', ymin=0, ymax=1,
+    background=globalGraphBackgroundColor, foreground=globalGraphForegroundColor, xmin=0, xmax=fitCurveStopDelay)
 
 
 
