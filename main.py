@@ -393,7 +393,7 @@ def generatePosition(d3:bool=True) -> vector:
 
 
 
-def generateElement(e:int, d3:bool=True) -> sphere:
+def generateElement(e:int, d3:bool=True, overwriteTrail:bool=False, overwriteEmission:bool=False) -> sphere:
     '''Generate a particle (VPython Sphere object) for the simulation
 
     Args:
@@ -403,12 +403,14 @@ def generateElement(e:int, d3:bool=True) -> sphere:
     Returns:
         VPython Sphere object, the particle for the simulation.
     '''
-    global particleEmission, makeTrails, retainTrail, elements
+    global makeEmission, makeTrails, retainTrail, elements
 
     particleRadius = getRadiiElement(e)
     particleMass = generateMassElement(e)
     particleColor = elements[e]['color']
     particleVelocity = generateVelocity(particleMass, d3)/particleMass
+    particleTrail = ((overwriteTrail) or (makeTrails))
+    particleEmission = ((overwriteEmission) or (makeEmission))
 
     still = True
     positions = list(map(getPositionAndRadius, globalParticles))
@@ -421,9 +423,9 @@ def generateElement(e:int, d3:bool=True) -> sphere:
                 break
 
     if prettySpheres:
-        particle = sphere(pos=particlePosition, radius=particleRadius, color=particleColor, make_trail=makeTrails, retain=retainTrail)
+        particle = sphere(pos=particlePosition, radius=particleRadius, color=particleColor, make_trail=particleTrail, retain=retainTrail)
     else:
-        particle = simple_sphere(pos=particlePosition, radius=particleRadius, color=particleColor, makeTrails=makeTrails, retain=retainTrail)
+        particle = simple_sphere(pos=particlePosition, radius=particleRadius, color=particleColor, makeTrails=particleTrail, retain=retainTrail)
     particle.v = particleVelocity
     particle.m = particleMass
     particle.emissive = particleEmission
@@ -438,7 +440,7 @@ def generateElement(e:int, d3:bool=True) -> sphere:
 
 
 
-def generateMolecule(mol:str, d3:bool=True) -> sphere:
+def generateMolecule(mol:str, d3:bool=True, overwriteTrail:bool=False, overwriteEmission:bool=False) -> sphere:
     '''Generate a particle (VPython Sphere object) for the simulation
 
     Args:
@@ -448,12 +450,14 @@ def generateMolecule(mol:str, d3:bool=True) -> sphere:
     Returns:
         VPython Sphere object, the particle for the simulation.
     '''
-    global particleEmission, makeTrails, retainTrail, molecules
+    global makeEmission, makeTrails, retainTrail, molecules
 
     particleRadius = getRadiiMolecule(mol)
     particleMass = generateMassMolecule(mol)
     particleColor = molecules[mol]['color']
     particleVelocity = generateVelocity(particleMass, d3)/particleMass
+    particleTrail = ((overwriteTrail) or (makeTrails))
+    particleEmission = ((overwriteEmission) or (makeEmission))
 
     still = True
     positions = list(map(getPositionAndRadius, globalParticles))
@@ -466,9 +470,9 @@ def generateMolecule(mol:str, d3:bool=True) -> sphere:
                 break
 
     if prettySpheres:
-        particle = sphere(pos=particlePosition, radius=particleRadius, color=particleColor, make_trail=makeTrails, retain=retainTrail)
+        particle = sphere(pos=particlePosition, radius=particleRadius, color=particleColor, make_trail=particleTrail, retain=retainTrail)
     else:
-        particle = simple_sphere(pos=particlePosition, radius=particleRadius, color=particleColor, makeTrails=makeTrails, retain=retainTrail)
+        particle = simple_sphere(pos=particlePosition, radius=particleRadius, color=particleColor, make_trail=particleTrail, retain=retainTrail)
     particle.v = particleVelocity
     particle.m = particleMass
     particle.emissive = particleEmission
@@ -483,6 +487,30 @@ def generateMolecule(mol:str, d3:bool=True) -> sphere:
 
 
 
+def generateFollowParticles(d3:bool=True):
+    '''Generates the particles that can be follower via emission and trails.
+    
+    Args:
+        d3: bool, True if the simulation is 3-Dimensional, false else.
+    '''
+    global globalParticles, followParticleTrail, followParticleEmission
+
+    for element in elementsToSimulate:
+        if elementsToSimulate[element] <= 0: continue
+        elementsToSimulate[element] -= 1
+        particle = generateElement(element, d3, overwriteTrail=followParticleTrail, overwriteEmission=followParticleEmission)
+        globalParticles.append(particle)
+
+    for mol in moleculesToSimulate:
+        if moleculesToSimulate[mol] <= 0: continue
+        moleculesToSimulate[mol] -= 1
+        particle = generateMolecule(mol, d3, overwriteTrail=followParticleTrail, overwriteEmission=followParticleEmission)
+        globalParticles.append(particle)
+
+    return
+
+
+
 def generateParticlesAndCurves(d3):
     '''Generate all particles and curves of the simulation.
     
@@ -490,15 +518,20 @@ def generateParticlesAndCurves(d3):
         d3: bool, True if the simulation is 3-Dimensional, false else.
     '''
     global elements, elementsToSimulate, molecules, moleculesToSimulate, globalTheoryCurve, globalParticles, showHistogram
+    global followParticleTrail, followParticleEmission
+
+    logicalFollow = ((followParticleTrail) or (followParticleEmission))
+    if logicalFollow:
+        generateFollowParticles(d3)
 
     for element, count in elementsToSimulate.items():
-        if ((showHistogram) and (globalTheoryCurve)): generateTheoryCurveElement(element, count)
+        if ((showHistogram) and (globalTheoryCurve)): generateTheoryCurveElement(element, (count + int(((logicalFollow) and (count > 0)))))
         for _ in range(count):
             particle = generateElement(element, d3)
             globalParticles.append(particle)
 
     for mol, count in moleculesToSimulate.items():
-        if ((showHistogram) and (globalTheoryCurve)): generateTheoryCurveMolecule(mol, count)
+        if ((showHistogram) and (globalTheoryCurve)): generateTheoryCurveMolecule(mol, (count + int(((logicalFollow) and (count > 0)))))
         for _ in range(count):
             particle = generateMolecule(mol, d3)
             globalParticles.append(particle)
@@ -968,7 +1001,7 @@ neighbourImplementation = True
 # DO NOT CHANGE!!! NOT IMPLEMENTED CORRECTLY! WILL MAKE SIMULATION RUN SLOWER (MUCH SLOWER)!
 globalUpdateNeighbour = True
 # Defines if the histogram and velocities graph is created and shown
-showHistogram = False
+showHistogram = True
 # Defines if the concentrations graph is created and shown
 showConcentrations = generateTheoryCurveElement
 
@@ -976,20 +1009,28 @@ showConcentrations = generateTheoryCurveElement
 
 # Wall variables
 # Size of each wall (Angstrom)
-side = 3
+side = 9
 # Thickness of each wall
 thickness = .5
+
+
+
+# Emission and trail options
+# Makes particles have trails and their retain iterations
+makeTrails = False
+retainTrail = 10
+# Make particles emit light
+makeEmission = False
+# Make only 1 particle have a tral
+followParticleTrail = True
+# Make only 1 particle emit light
+followParticleEmission = True
 
 
 
 # Prettier
 # Makes the simulation have prettier graphics (WIP)
 boxCorner = True
-# Makes particles have trails and their retain iterations
-makeTrails = False
-retainTrail = 5
-# Make particles emit light
-particleEmission = False
 # Make Vpython use prettier spheres
 prettySpheres = True
 # Defines if graphs use the fast implementation or not
@@ -1028,7 +1069,7 @@ neighbourMaxShellBuffer = 2.2
 # List of element to simulate (atomic number)
 elementsToSimulate = {1: 300}
 # List of molecules to simulate
-moleculesToSimulate = {'H2': 0}
+moleculesToSimulate = {'H2': 100}
 # Total number of particles
 nParticles = sum(elementsToSimulate.values()) + sum(moleculesToSimulate.values())
 
@@ -1111,4 +1152,4 @@ if globalFitCurveStop:
 # Creating the walls of the simulation
 createWalls(False)
 # Running the simulation
-run(True)
+run(False)
