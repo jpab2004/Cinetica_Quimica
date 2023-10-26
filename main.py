@@ -735,7 +735,7 @@ def createFitCurve(params):
 
 def fitGraph():
     '''Fits the graph of the concentrations of the simulation.'''
-    global concentrations, particlesToFit
+    global concentrations, particlesToFit, scene
 
     for p, (curveType, initial) in particlesToFit.items():
         x = [i[0] for i in concentrations[p][-1].data]
@@ -749,10 +749,11 @@ def fitGraph():
 
         result = model.fit(y, params, x=x)
 
-        print(result.fit_report())
         params = [p, result, [x, y]]
         createFitCurve(params)
 
+        scene.append_to_caption(f"Tipo de partícula: {p}\nAmplitude: {result.best_values['amplitude']}\nDecay: {result.best_values['decay']}\n\n")
+    
 
 
 #===============================================================================================#
@@ -837,6 +838,7 @@ def stepSimulation():
         manager['histogramIterator'] = 1
     if ((globalFitCurveStop) and (manager['iterations'] >= fitCurveStopDelay)):
         fitGraph()
+        pauseSimulation()
         globalFitCurveStop = False
 
     manager['histogramIterator'] += 1
@@ -1001,7 +1003,7 @@ neighbourImplementation = True
 # DO NOT CHANGE!!! NOT IMPLEMENTED CORRECTLY! WILL MAKE SIMULATION RUN SLOWER (MUCH SLOWER)!
 globalUpdateNeighbour = True
 # Defines if the histogram and velocities graph is created and shown
-showHistogram = True
+showHistogram = False
 # Defines if the concentrations graph is created and shown
 showConcentrations = generateTheoryCurveElement
 
@@ -1009,7 +1011,7 @@ showConcentrations = generateTheoryCurveElement
 
 # Wall variables
 # Size of each wall (Angstrom)
-side = 9
+side = 3
 # Thickness of each wall
 thickness = .5
 
@@ -1041,7 +1043,7 @@ globalGraphForegroundColor = HEX2VEC('#000000')
 # Citing the theory curve to be imprecise
 scene.append_to_caption("<br><b>Obs.:</b> A curva teórica apresentada de Boltzmann esta relacionada ao estado inicial da simulação")
 # Creating a line between graphs and controls
-scene.append_to_caption("<br><hr><br>")
+scene.append_to_caption("<br><hr>")
 
 
 
@@ -1069,7 +1071,7 @@ neighbourMaxShellBuffer = 2.2
 # List of element to simulate (atomic number)
 elementsToSimulate = {1: 300}
 # List of molecules to simulate
-moleculesToSimulate = {'H2': 100}
+moleculesToSimulate = {'H2': 0}
 # Total number of particles
 nParticles = sum(elementsToSimulate.values()) + sum(moleculesToSimulate.values())
 
@@ -1152,4 +1154,4 @@ if globalFitCurveStop:
 # Creating the walls of the simulation
 createWalls(False)
 # Running the simulation
-run(False)
+run(True)
