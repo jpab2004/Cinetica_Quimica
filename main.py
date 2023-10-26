@@ -2,23 +2,25 @@
 #                                             Setup                                             #
 #===============================================================================================#
 # Libraries
-# Array support
-from numpy import array, linspace, inf
-
 # Iterable annotations
 from collections.abc import Iterable
-
-# Curve fitting
-from scipy.optimize import curve_fit
-
-# Library for combinations of particles without repetition
-from itertools import combinations
 
 # Function to generate pseudorandom numbers equally distributed
 from random import uniform, random
 
+# Library for combinations of particles without repetition
+from itertools import combinations
+
+# Curve fitting
+from lmfit.models import Model
+from lmfit import Parameters
+
 # Function to load element data for the simulation
 from pickle import load
+
+# Array support
+from numpy import array
+import numpy as np
 
 # Function to verify if variable is not numeric
 from math import isnan
@@ -84,6 +86,9 @@ def HEX2VEC(hex):
 
 fitFunction1X = lambda xs, a, b: [1/(a*x**b + 1) for x in xs]
 fitFunctionInverted1X = lambda xs, a, b: [-1/(a*x**b + 1) + 1 for x in xs]
+
+def fitFunctionE(x, amplitude, decay, independent):
+    return amplitude*np.exp(decay*np.longdouble(x)) + independent
 
 
 
@@ -681,7 +686,7 @@ def createFitCurve(params):
     '''
     global fittingGraph, language, fitCurveStopDelay, globalGdotRadius
 
-    particleType, curveType, optParams, (x, y) = params
+    particleType, result, (xs, ys) = params
 
     if particleType in elements:
         fittedCurve = gcurve(color=elements[particleType]['color'], label=elements[particleType][language], graph=fittingGraph)
@@ -690,11 +695,8 @@ def createFitCurve(params):
         fittedCurve = gcurve(color=molecules[particleType]['color'], label=molecules[particleType][language], graph=fittingGraph)
         dotsCurve = gdots(color=molecules[particleType]['color'], graph=fittingGraph, radius=globalGdotRadius)
 
-    fittedXs = linspace(0, fitCurveStopDelay, num=500)
-    fittedYs = curveType(x, *optParams)
-
-    fittedCurve.plot([[x, y] for x, y in zip(fittedXs, fittedYs)])
-    dotsCurve.plot([[x, y] for (x, y) in zip(x, y)])
+    fittedCurve.plot([[x, y] for x, y in zip(xs, result.best_fit)])
+    dotsCurve.plot([[x, y] for (x, y) in zip(xs, ys)])
 
 
 
@@ -702,13 +704,20 @@ def fitGraph():
     '''Fits the graph of the concentrations of the simulation.'''
     global concentrations, particlesToFit
 
-    for p, (curveType, initial, bounds) in particlesToFit.items():
+    for p, (curveType, initial) in particlesToFit.items():
         x = [i[0] for i in concentrations[p][-1].data]
         y = [i[1] for i in concentrations[p][-1].data]
 
-        opt, cov, dic, mesg, ier = curve_fit(curveType, x, y, p0=initial, full_output=True, bounds=bounds)
+        model = Model(curveType)
+        params = Parameters()
 
-        params = [p, curveType, opt, [x, y]]
+        for name, (value, vary, minv, maxv, expr, brute_step) in initial.items():
+            params.add(name=name, value=value, vary=vary, min=minv, max=maxv, expr=expr, brute_step=brute_step)
+
+        result = model.fit(y, params, x=x)
+
+        print(result.fit_report())
+        params = [p, result, [x, y]]
         createFitCurve(params)
 
 
@@ -828,7 +837,7 @@ def run(d3:bool=True) -> None:
     startSimulationButton.disabled = False
 
     while(not globalStart):
-        rate(15)
+        rate(100)
         continue
 
     while(True):
@@ -967,7 +976,7 @@ showConcentrations = generateTheoryCurveElement
 
 # Wall variables
 # Size of each wall (Angstrom)
-side = 15
+side = 3
 # Thickness of each wall
 thickness = .5
 
@@ -1001,7 +1010,7 @@ globalParticles = []
 # Buffer for the radius size (graphics)
 radiiFunc = lambda x: x/5 + .2
 # Buffer for generating the initial position of particles
-positionBuffer = .9*side
+positionBuffer = .8*side
 # Bool for defining if particles start randomly scattered or on the center
 randomPosition = True
 # Bool for defining use of empirical radii or calculated radii
@@ -1017,7 +1026,7 @@ neighbourMaxShellBuffer = 2.2
 
 # Elements and Molecules
 # List of element to simulate (atomic number)
-elementsToSimulate = {1: 500}
+elementsToSimulate = {1: 300}
 # List of molecules to simulate
 moleculesToSimulate = {'H2': 0}
 # Total number of particles
@@ -1064,20 +1073,31 @@ else:
     ytitle='Concentração', fast=globalFastGraph, width=conGraphWidth, height=conGraphHeight, align='left', ymin=0, ymax=1,
     background=globalGraphBackgroundColor, foreground=globalGraphForegroundColor)
 # Amount of loops to update the graph (optimization)
-loopConcentrationVerboseCount = 20
+loopConcentrationVerboseCount = 25
 
 
 
 # Curve fitting
 # Define the stop simulation iteration
 globalFitCurveStop = True
-fitCurveStopDelay = 1e4
+fitCurveStopDelay = 2e4
 # Defining the global size of plots
 globalGdotRadius = 1
+# Define fitting buffer
+globalFitBuffer = 1e2
 # Defining the particles to fit
 particlesToFit = {
-    1: (fitFunction1X, [.002, 1.3], ([-inf, -inf], [inf, inf])),
-    'H2': (fitFunctionInverted1X, [.002, 1.3], ([-inf, -inf], [inf, inf]))
+    1: (fitFunctionE, {
+        'amplitude': [-1, True, -globalFitBuffer, globalFitBuffer, None, None],
+        'decay': [-.004, True, -globalFitBuffer, 0, None, None],
+        'independent': [1, True, -globalFitBuffer, globalFitBuffer, None, None]
+    }),
+
+    'H2': (fitFunctionE, {
+        'amplitude':[1, True, -globalFitBuffer, globalFitBuffer, None, None],
+        'decay': [-.004, True, -globalFitBuffer, 0, None, None],
+        'independent': [0, True, -globalFitBuffer, globalFitBuffer, None, None]
+    })
 }
 # Creating the graph
 if globalFitCurveStop:
@@ -1091,4 +1111,4 @@ if globalFitCurveStop:
 # Creating the walls of the simulation
 createWalls(False)
 # Running the simulation
-run(False)
+run(True)

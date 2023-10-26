@@ -23,7 +23,7 @@ molecules = {
         'radii-calculated': 106,
         'mass': 2.016,
         'delay': 0,
-        'reagents-chance': [[1, 1, .1]],
+        'reagents-chance': [[1, 1, .05]],
         'color': HEX2VEC('#32b82e')
     },
 
