@@ -733,9 +733,98 @@ def createFitCurve(params):
 
 
 
+def generateFitTable(p:[int,str], result, law:bool=False):
+    '''Generates the table of the fitted parameters.
+    
+    Args:
+        p: int/str, particle type;
+        result: 
+        law: bool, whether to include reaction law or not.
+
+    Returns:
+        str, table in html and css to put on the simulation.
+    '''
+    if p in elements: name = elements[p][language]; symbol = elements[p]['symbol']
+    else: name = molecules[p][language]; symbol = p
+
+    if law:
+        return f'''
+            <style type="text/css">
+            .tg  {{border-collapse:collapse;border-spacing:0;}}
+            .tg td{{border-color:black;border-style:solid;border-width:1px;font-family:Arial, sans-serif;font-size:14px;
+            overflow:hidden;padding:10px 5px;word-break:normal;}}
+            .tg th{{border-color:black;border-style:solid;border-width:1px;font-family:Arial, sans-serif;font-size:14px;
+            font-weight:normal;overflow:hidden;padding:10px 5px;word-break:normal;}}
+            .tg .tg-7btt{{border-color:inherit;font-weight:bold;text-align:center;vertical-align:top}}
+            .tg .tg-0pky{{border-color:inherit;text-align:left;vertical-align:top}}
+            .tg .tg-dvpl{{border-color:inherit;text-align:right;vertical-align:top}}
+            </style>
+            <table class="tg">
+            <thead>
+            <tr>
+                <th class="tg-7btt" colspan="2">{name}</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr>
+                <td class="tg-0pky">Amplitude</td>
+                <td class="tg-dvpl">{result.best_values['amplitude']}</td>
+            </tr>
+            <tr>
+                <td class="tg-0pky">Decaimento</td>
+                <td class="tg-dvpl">{result.best_values['decay']}</td>
+            </tr>
+            <tr>
+                <td class="tg-0pky">Independente</td>
+                <td class="tg-dvpl">{result.best_values['independent']}</td>
+            </tr>
+            <tr>
+                <td class="tg-0pky">Lei de Reação</td>
+                <td class="tg-0pky">d[{symbol}]/dt = {result.best_values['decay']:.5} [{symbol}]¹</td>
+            </tr>
+            </tbody>
+            </table>
+        '''
+    else:
+        return f'''
+            <style type="text/css">
+            .tg  {{border-collapse:collapse;border-spacing:0;}}
+            .tg td{{border-color:black;border-style:solid;border-width:1px;font-family:Arial, sans-serif;font-size:14px;
+            overflow:hidden;padding:10px 5px;word-break:normal;}}
+            .tg th{{border-color:black;border-style:solid;border-width:1px;font-family:Arial, sans-serif;font-size:14px;
+            font-weight:normal;overflow:hidden;padding:10px 5px;word-break:normal;}}
+            .tg .tg-lqy6{{text-align:right;vertical-align:top}}
+            .tg .tg-amwm{{font-weight:bold;text-align:center;vertical-align:top}}
+            .tg .tg-0lax{{text-align:left;vertical-align:top}}
+            </style>
+            <table class="tg">
+            <thead>
+            <tr>
+                <th class="tg-amwm" colspan="2">{name}</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr>
+                <td class="tg-0lax">Amplitude</td>
+                <td class="tg-lqy6">{result.best_values['amplitude']}</td>
+            </tr>
+            <tr>
+                <td class="tg-0lax">Decaimento</td>
+                <td class="tg-lqy6">{result.best_values['decay']}</td>
+            </tr>
+            <tr>
+                <td class="tg-0lax">Independente</td>
+                <td class="tg-lqy6">{result.best_values['independent']}</td>
+            </tr>
+            </tbody>
+            </table>
+        '''
+
+
+
 def fitGraph():
     '''Fits the graph of the concentrations of the simulation.'''
-    global concentrations, particlesToFit, scene, reactionLawVerbose
+    global concentrations, particlesToFit, scene, reactionLawVerbose, language
 
     for p, (curveType, initial) in particlesToFit.items():
         x = [i[0] for i in concentrations[p][-1].data]
@@ -751,15 +840,8 @@ def fitGraph():
 
         params = [p, result, [x, y]]
         createFitCurve(params)
-
-        if p in elements: name = elements[p]['symbol']
-        else: name = p
-
-        scene.append_to_caption(f"Tipo de partícula: {name}\nAmplitude: {result.best_values['amplitude']}\nDecay: {result.best_values['decay']}\n")
-        if p in reactionLawVerbose:
-            dec = result.best_values['decay']
-
-            scene.append_to_caption(f'Lei de reação: d[{name}]/dt = {dec:.5} [{name}]¹\n\n')
+        table = generateFitTable(p, result, p in reactionLawVerbose)
+        scene.append_to_caption(table)
     
 
 
@@ -1010,7 +1092,7 @@ neighbourImplementation = True
 # DO NOT CHANGE!!! NOT IMPLEMENTED CORRECTLY! WILL MAKE SIMULATION RUN SLOWER (MUCH SLOWER)!
 globalUpdateNeighbour = True
 # Defines if the histogram and velocities graph is created and shown
-showHistogram = False
+showHistogram = True
 # Defines if the concentrations graph is created and shown
 showConcentrations = generateTheoryCurveElement
 
@@ -1043,7 +1125,7 @@ boxCorner = True
 # Make Vpython use prettier spheres
 prettySpheres = True
 # Defines if graphs use the fast implementation or not
-globalFastGraph = False
+globalFastGraph = True
 # Define the graph background and foreground color
 globalGraphBackgroundColor = HEX2VEC('#BBBBBB')
 globalGraphForegroundColor = HEX2VEC('#000000')

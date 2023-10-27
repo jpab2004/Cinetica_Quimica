@@ -60,15 +60,26 @@ molecules = {
         'color': HEX2VEC('#7777ff')
     },
 
-    'E': {
-        'name-en': 'Extensorium',
-        'name-pt': 'Extensorium',
-        'radii-empirical': 250,
-        'radii-calculated': 400,
-        'mass': 200,
+    'O2': {
+        'name-en': 'Oxygen',
+        'name-pt': 'Hidroxila',
+        'radii-empirical': 70,
+        'radii-calculated': 100,
+        'mass': 15.999,
         'delay': 0,
-        'reagents-chance': [[92, 94, 1]],
-        'color': HEX2VEC('#e6cf09')
+        'reagents-chance': [[8, 8, .02]],
+        'color': HEX2VEC('#cc34eb')
+    },
+
+    'CO2': {
+        'name-en': 'Carbon dioxide',
+        'name-pt': 'Dióxido de carbono',
+        'radii-empirical': 116.3,
+        'radii-calculated': 154,
+        'mass': 44.009,
+        'delay': 0,
+        'reagents-chance': [[6, 'O2', .1]],
+        'color': HEX2VEC('#0303fc')
     }
 }
 
