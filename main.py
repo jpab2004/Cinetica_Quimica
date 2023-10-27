@@ -735,7 +735,7 @@ def createFitCurve(params):
 
 def fitGraph():
     '''Fits the graph of the concentrations of the simulation.'''
-    global concentrations, particlesToFit, scene
+    global concentrations, particlesToFit, scene, reactionLawVerbose
 
     for p, (curveType, initial) in particlesToFit.items():
         x = [i[0] for i in concentrations[p][-1].data]
@@ -752,7 +752,14 @@ def fitGraph():
         params = [p, result, [x, y]]
         createFitCurve(params)
 
-        scene.append_to_caption(f"Tipo de partícula: {p}\nAmplitude: {result.best_values['amplitude']}\nDecay: {result.best_values['decay']}\n\n")
+        if p in elements: name = elements[p]['symbol']
+        else: name = p
+
+        scene.append_to_caption(f"Tipo de partícula: {name}\nAmplitude: {result.best_values['amplitude']}\nDecay: {result.best_values['decay']}\n")
+        if p in reactionLawVerbose:
+            dec = result.best_values['decay']
+
+            scene.append_to_caption(f'Lei de reação: d[{name}]/dt = {dec:.5} [{name}]¹\n\n')
     
 
 
@@ -1128,6 +1135,8 @@ fitCurveStopDelay = 2e4
 globalGdotRadius = 1
 # Define fitting buffer
 globalFitBuffer = 1e2
+# Define the elements/molecules to show the reaction law
+reactionLawVerbose = [1]
 # Defining the particles to fit
 particlesToFit = {
     1: (fitFunctionE, {
