@@ -925,7 +925,7 @@ def stepSimulation():
     if ((showHistogram) and (manager['histogramIterator'])) >= loopHistogramVerboseCount:
         drawHist(globalParticles)
         manager['histogramIterator'] = 1
-    if ((globalFitCurveStop) and (manager['iterations'] >= fitCurveStopDelay)):
+    if (((showConcentrations) and (globalFitCurveStop)) and (manager['iterations'] >= fitCurveStopDelay)):
         fitGraph()
         pauseSimulation()
         globalFitCurveStop = False
@@ -1092,9 +1092,9 @@ neighbourImplementation = True
 # DO NOT CHANGE!!! NOT IMPLEMENTED CORRECTLY! WILL MAKE SIMULATION RUN SLOWER (MUCH SLOWER)!
 globalUpdateNeighbour = True
 # Defines if the histogram and velocities graph is created and shown
-showHistogram = True
+showHistogram = False
 # Defines if the concentrations graph is created and shown
-showConcentrations = generateTheoryCurveElement
+showConcentrations = True
 
 
 
