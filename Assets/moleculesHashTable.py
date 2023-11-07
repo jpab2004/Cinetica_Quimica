@@ -23,7 +23,7 @@ molecules = {
         'radii-calculated': 106,
         'mass': 2.016,
         'delay': 0,
-        'reagents-chance': [[1, 1, .05]],
+        'reagents-chance': [[1, 1, .01]], # tested .05 for fitCurve
         'color': HEX2VEC('#32b82e')
     },
 

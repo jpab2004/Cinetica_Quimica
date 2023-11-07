@@ -343,22 +343,22 @@ def generateVelocity(particleMass:float, d3:bool=True) -> vector:
     Returns:
         VPython vector object, vector with the velocity for the particle.
     '''
-    averageKinecticMomentum = sqrt(2*particleMass*1.5*k*temperature)
+    averageKinecticEnergy = sqrt(2*particleMass*1.5*k*temperature)
 
     if d3:
         psi = radians(uniform(0, 360))
         theta = radians(uniform(0, 360))
 
-        x = averageKinecticMomentum * cos(theta) * sin(psi)
-        y = averageKinecticMomentum * sin(theta) * sin(psi)
-        z = averageKinecticMomentum * cos(psi)
+        x = averageKinecticEnergy * cos(theta) * sin(psi)
+        y = averageKinecticEnergy * sin(theta) * sin(psi)
+        z = averageKinecticEnergy * cos(psi)
 
         return vector(x, y, z)
     else:
         theta = radians(uniform(0, 360))
 
-        x = averageKinecticMomentum * cos(theta)
-        y = averageKinecticMomentum * sin(theta)
+        x = averageKinecticEnergy * cos(theta)
+        y = averageKinecticEnergy * sin(theta)
 
         return vector(x, y, 0)
 
@@ -1048,18 +1048,32 @@ def setNumberOfSteps(s:slider) -> None:
 
 
 
+# Appending a tab to the caption
+scene.append_to_caption("&emsp;&emsp;&emsp;")
+
 # Creates the button to start the simulation
 startSimulationButton = button(pos=scene.caption_anchor, text='Começar simulação', bind=startSimulation, disabled=True, left=50)
+
+# Appending a tab between buttons
+scene.append_to_caption("&emsp;&emsp;")
+
 # Creates the button to pause the simulation
 pauseSimulationButton = button(pos=scene.caption_anchor, text='Pausar simulação', bind=pauseSimulation, disabled=True, left=50)
 
 # Appending a break of line to the caption
-scene.append_to_caption("<br>")
+scene.append_to_caption("<br>&emsp;&emsp;&emsp;")
 
 # Creates the button to resume the simulation
 resumeSimulationButton = button(pos=scene.caption_anchor, text='Resumir simulação', bind=resumeSimulation, disabled=True, left=50)
+
+# Appending a tab between buttons
+scene.append_to_caption("&emsp;&emsp;")
+
 # Creates the button to make 1 step in the simulation
 stepSimulationButton = button(pos=scene.caption_anchor, text='Rodar passos', bind=stepSimulationNTimes, disabled=True, left=50)
+
+# Appending a tab between buttons
+scene.append_to_caption("&emsp;&emsp;")
 
 # Creates the slider to change the number of manual steps
 numberOfStepsSlider = slider(min=1, max=500, value=250, step=1, length=220, bind=setNumberOfSteps, disabled=True, left=20)
@@ -1092,7 +1106,7 @@ neighbourImplementation = True
 # DO NOT CHANGE!!! NOT IMPLEMENTED CORRECTLY! WILL MAKE SIMULATION RUN SLOWER (MUCH SLOWER)!
 globalUpdateNeighbour = True
 # Defines if the histogram and velocities graph is created and shown
-showHistogram = False
+showHistogram = True
 # Defines if the concentrations graph is created and shown
 showConcentrations = True
 
@@ -1130,7 +1144,7 @@ globalFastGraph = True
 globalGraphBackgroundColor = HEX2VEC('#BBBBBB')
 globalGraphForegroundColor = HEX2VEC('#000000')
 # Citing the theory curve to be imprecise
-scene.append_to_caption("<br><b>Obs.:</b> A curva teórica apresentada de Boltzmann esta relacionada ao estado inicial da simulação")
+scene.append_to_caption("<br><b>&emsp;&emsp;&emsp;Obs.:</b> A curva teórica apresentada de Boltzmann esta relacionada ao estado inicial da simulação")
 # Creating a line between graphs and controls
 scene.append_to_caption("<br><hr>")
 
@@ -1168,7 +1182,7 @@ nParticles = sum(elementsToSimulate.values()) + sum(moleculesToSimulate.values()
 
 # Velocity graph variables
 # Determine whether to generate the theory curve of each element or not
-globalTheoryCurve = True
+globalTheoryCurve = False
 # Delta V for histogram binning
 dv = 100
 # Max velocity displayed on the graph
@@ -1211,7 +1225,7 @@ loopConcentrationVerboseCount = 25
 
 # Curve fitting
 # Define the stop simulation iteration
-globalFitCurveStop = True
+globalFitCurveStop = False
 fitCurveStopDelay = 2e4
 # Defining the global size of plots
 globalGdotRadius = 1
