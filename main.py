@@ -53,10 +53,11 @@ scene.append_to_caption("<div id='fps'/>")
 # GLOBAL MANAGER
 # Global simulation manager! DON'T CHANGE
 manager = {
-    'histogramIterator': 1,
     'neighbourIterator': 1,
+    'histogramIterator': 1,
     'concentrationIterator': 1,
-    'iterations': 1
+    'temperatureIterator': 1,
+    'iterations': 0
 }
 
 
@@ -171,16 +172,12 @@ def getHist(v:float) -> int:
 
 
 
-def drawHist(particles:Iterable[list, array]) -> None:
-    '''Generates and plots the histogram of velocities of the simulation.
-
-    Args:
-        particles: VPython Sphere object iterator, contains all particle objects in the simulation.
-    '''
-    global velBars
+def updateVelocities() -> None:
+    '''Generates and plots the histogram of velocities of the simulation.'''
+    global velBars, globalParticles
 
     histData = {}
-    vels = list(map(getVelocity, particles))
+    vels = list(map(getVelocity, globalParticles))
     for i in list(map(getHist, vels)):
         try:
             histData[i] += 1
@@ -343,7 +340,7 @@ def generateVelocity(particleMass:float, d3:bool=True) -> vector:
     Returns:
         VPython vector object, vector with the velocity for the particle.
     '''
-    averageKinecticEnergy = sqrt(2*particleMass*1.5*k*temperature)
+    averageKinecticEnergy = sqrt(3*particleMass*k*temperature)
 
     if d3:
         psi = radians(uniform(0, 360))
@@ -676,6 +673,28 @@ def updateConcentrations():
 
 
 
+def updateTemperature():
+    '''Updates the temperature graph.'''
+    global globalParticles, temperatureCurve, manager, nParticles
+
+    # temperature = 0
+    # for p in globalParticles:
+    #     temperature += mag(p.v)/p.m
+
+    vels = 0
+    for p in globalParticles:
+        vels += mag2(p.v)
+    
+    vels /= nParticles
+    vrms = sqrt(vels)
+
+    temperature = vrms/9
+    temperatureCurve.plot(manager['iterations'], temperature)
+
+    return
+
+
+
 def updateNeighbours(p1:sphere, particles:Iterable[list, array]) -> None:
     '''Updates the neighbours of 1 particle.
     
@@ -717,16 +736,16 @@ def createFitCurve(params):
     Args:
         params: list, the parameters of the fit curve.
     '''
-    global fittingGraph, language, fitCurveStopDelay, globalGdotRadius
+    global fittingGraph, language, fitCurveStopDelay, globalGDotRadius
 
     particleType, result, (xs, ys) = params
 
     if particleType in elements:
         fittedCurve = gcurve(color=elements[particleType]['color'], label=elements[particleType][language], graph=fittingGraph)
-        dotsCurve = gdots(color=elements[particleType]['color'], graph=fittingGraph, radius=globalGdotRadius)
+        dotsCurve = gdots(color=elements[particleType]['color'], graph=fittingGraph, radius=globalGDotRadius)
     elif particleType in molecules:
         fittedCurve = gcurve(color=molecules[particleType]['color'], label=molecules[particleType][language], graph=fittingGraph)
-        dotsCurve = gdots(color=molecules[particleType]['color'], graph=fittingGraph, radius=globalGdotRadius)
+        dotsCurve = gdots(color=molecules[particleType]['color'], graph=fittingGraph, radius=globalGDotRadius)
 
     fittedCurve.plot([[x, y] for x, y in zip(xs, result.best_fit)])
     dotsCurve.plot([[x, y] for (x, y) in zip(xs, ys)])
@@ -923,15 +942,19 @@ def stepSimulation():
         updateConcentrations()
         manager['concentrationIterator'] = 1
     if ((showHistogram) and (manager['histogramIterator'])) >= loopHistogramVerboseCount:
-        drawHist(globalParticles)
+        updateVelocities()
         manager['histogramIterator'] = 1
     if (((showConcentrations) and (globalFitCurveStop)) and (manager['iterations'] >= fitCurveStopDelay)):
         fitGraph()
         pauseSimulation()
         globalFitCurveStop = False
+    if ((showTemperature) and (manager['temperatureIterator'])) >= loopTemperatureVerboseCount:
+        updateTemperature()
+        manager['temperatureIterator'] = 1
 
     manager['histogramIterator'] += 1
     manager['concentrationIterator'] += 1
+    manager['temperatureIterator'] += 1
     if (neighbourImplementation): manager['neighbourIterator'] += 1
 
     manager['iterations'] += 1
@@ -957,6 +980,9 @@ def run(d3:bool=True) -> None:
 
     generateParticlesAndCurves(d3)
     generateConcentrations()
+    updateTemperature()
+    updateConcentrations()
+    updateVelocities()
 
     startSimulationButton.disabled = False
 
@@ -1109,6 +1135,8 @@ globalUpdateNeighbour = True
 showHistogram = True
 # Defines if the concentrations graph is created and shown
 showConcentrations = True
+# Defines if the temperature graph is created and shown
+showTemperature = True
 
 
 
@@ -1140,6 +1168,8 @@ boxCorner = True
 prettySpheres = True
 # Defines if graphs use the fast implementation or not
 globalFastGraph = True
+# Defining the global size of plots
+globalGDotRadius = 1
 # Define the graph background and foreground color
 globalGraphBackgroundColor = HEX2VEC('#BBBBBB')
 globalGraphForegroundColor = HEX2VEC('#000000')
@@ -1227,8 +1257,6 @@ loopConcentrationVerboseCount = 25
 # Define the stop simulation iteration
 globalFitCurveStop = False
 fitCurveStopDelay = 2e4
-# Defining the global size of plots
-globalGdotRadius = 1
 # Define fitting buffer
 globalFitBuffer = 1e2
 # Define the elements/molecules to show the reaction law
@@ -1248,10 +1276,30 @@ particlesToFit = {
     })
 }
 # Creating the graph
-if globalFitCurveStop:
-    fittingGraph = graph(title='Fit das concentrações na simulação', xtitle='Tempo (iterações)',
-    ytitle='Concentração', fast=globalFastGraph, width=conGraphWidth, height=conGraphHeight, align='left', ymin=0, ymax=1,
-    background=globalGraphBackgroundColor, foreground=globalGraphForegroundColor, xmin=0, xmax=fitCurveStopDelay)
+fittingGraph = graph(title='Fit das concentrações na simulação', xtitle='Tempo (iterações)',
+ytitle='Concentração', fast=globalFastGraph, width=conGraphWidth, height=conGraphHeight, align='left', ymin=0, ymax=1,
+background=globalGraphBackgroundColor, foreground=globalGraphForegroundColor, xmin=0, xmax=fitCurveStopDelay)
+
+
+
+# Temperature graph
+# Width and height of the temperature graph on the canvas
+temGraphWidth, temGraphHeight = 850, 300
+# Create a scrollable graph or not
+scrollableTemGraph = True
+# Creating the graph
+if scrollableTemGraph:
+    temperatureGraph = graph(title='Temperatura da simulação', xtitle='Tempo (iterações)', ytitle='Temperatura (K)',
+    fast=globalFastGraph, width=temGraphWidth, height=temGraphHeight, align='left', ymin=0,
+    background=globalGraphBackgroundColor, foreground=globalGraphForegroundColor, scroll=True, xmin=0, xmax=4*fps)
+else:
+    temperatureGraph = graph(title='Temperatura da simulação', xtitle='Tempo (iterações)', ytitle='Temperatura (K)',
+    fast=globalFastGraph, width=temGraphWidth, height=temGraphHeight, align='left', ymin=0, xmin=0,
+    background=globalGraphBackgroundColor, foreground=globalGraphForegroundColor)
+# Creting the temperature curve
+temperatureCurve = gcurve(graph=temperatureGraph, color=HEX2VEC('#555555'), label='Temperatura (K)')
+# Amount of loops to update the graph (optimization)
+loopTemperatureVerboseCount = 25
 
 
 
