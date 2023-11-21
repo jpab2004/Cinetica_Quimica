@@ -72,6 +72,10 @@ file2 = 'Assets/moleculesHashTable.pickle'
 with open(file2, 'rb') as f:
     molecules = load(f)
 
+file3 = 'Assets/catalystsHashTable.pickle'
+with open(file3, 'rb') as f:
+    catalysts = load(f)
+
 
 
 #===============================================================================================#
@@ -427,6 +431,7 @@ def generateElement(e:int, d3:bool=True, overwriteTrail:bool=False, overwriteEmi
     particle.m = particleMass
     particle.emissive = particleEmission
     particle.type = e
+    particle.catalyze = 1
 
     if neighbourImplementation:
         particle.neighbours = []
@@ -474,6 +479,8 @@ def generateMolecule(mol:str, d3:bool=True, overwriteTrail:bool=False, overwrite
     particle.m = particleMass
     particle.emissive = particleEmission
     particle.type = mol
+    particle.catalyze = 1
+    particle.catalyzeBuffer = 1
 
     if neighbourImplementation:
         particle.neighbours = []
@@ -610,6 +617,21 @@ def react(mol:str, p1:sphere, p2:sphere, toKill:Iterable[list, array]) -> Iterab
 
 
 
+def getReactionChance(p1, p2) -> float:
+    globalCatalyzeDecay
+
+    c1, c2 = p1.catalyze, p2.catalyze
+    b1, b2 = p1.catalyzeBuffer, p2.catalyzeBuffer    
+
+    if globalCatalyzeDecay:
+        chance = (random() * ((b1*c1) + (b2*c2))/2)
+    else:
+        chance = (random() * (b1 * b2))
+
+    return chance
+
+
+
 def colision(p1, p2, toKill):
     '''Makes everything necessary for the collision.
     
@@ -624,8 +646,9 @@ def colision(p1, p2, toKill):
             if molecules[mol]['delay'] >= manager['iterations']:
                 continue
 
-            for type1, type2, chance in molecules[mol]['reagents-chance']:
-                if ((chance >= random()) and (((type1 == p1.type) and (type2 == p2.type)) or ((type1 == p2.type) and (type2 == p1.type)))):
+            for type1, type2, chanceToReact in molecules[mol]['reagents-chance']:
+                chance = getReactionChance(p1, p2)
+                if ((chance >= (1 - chanceToReact)) and (((type1 == p1.type) and (type2 == p2.type)) or ((type1 == p2.type) and (type2 == p1.type)))):
                     react(mol, p1, p2, toKill)
                     continue
     
@@ -676,10 +699,6 @@ def updateConcentrations():
 def updateTemperature():
     '''Updates the temperature graph.'''
     global globalParticles, temperatureCurve, manager, nParticles
-
-    # temperature = 0
-    # for p in globalParticles:
-    #     temperature += mag(p.v)/p.m
 
     vels = 0
     for p in globalParticles:
@@ -861,7 +880,30 @@ def fitGraph():
         createFitCurve(params)
         table = generateFitTable(p, result, p in reactionLawVerbose)
         scene.append_to_caption(table)
-    
+
+
+
+def checkCatalyst(particles):
+    for p in particles:
+        if p.catalyze > 1:
+            p.catalyze -= 1
+        else:
+            p.catalyzeBuffer = 1
+
+    return
+
+
+
+def changeCatalyst(p:sphere) -> None:
+    global globalCatalyzeDecay
+
+    if globalCatalyzeDecay:
+        p.catalyze, p.catalyzeBuffer = catalysts[catalystsToSimulate[p.type]][p.type][0]
+    else:
+        p.catalyze, p.catalyzeBuffer = catalysts[catalystsToSimulate[p.type]][p.type][1]
+
+    return
+
 
 
 #===============================================================================================#
@@ -873,6 +915,8 @@ def step3D(particles:Iterable[list, array]) -> None:
     Args:
         particles: VPython Sphere object iterator, contains all particle objects in the simulation.
     '''
+    global catalystsToSimulate, globalCatalyzeReactions
+
     for p in particles:
         p.pos += p.v*dt
         wallCollision = side - .5*thickness - p.radius
@@ -880,13 +924,24 @@ def step3D(particles:Iterable[list, array]) -> None:
         if not (wallCollision > p.pos.x > -wallCollision):
             p.v.x *= -1
             p.pos += p.v*dt
+
+            if ((globalCatalyzeReactions) and (p.type in catalystsToSimulate)): 
+                changeCatalyst(p)
+
         if not (wallCollision > p.pos.y > -wallCollision):
             p.v.y *= -1
             p.pos += p.v*dt
+
+            if ((globalCatalyzeReactions) and (p.type in catalystsToSimulate)):
+                changeCatalyst(p)
+
         if not (wallCollision > p.pos.z > -wallCollision):
             p.v.z *= -1
             p.pos += p.v*dt
 
+            if ((globalCatalyzeReactions) and (p.type in catalystsToSimulate)):
+                changeCatalyst(p)
+            
         if ((neighbourImplementation) and (not globalUpdateNeighbour) and (p.lastUpdatePosDistance >= p.neighbourShell)): updateNeighbours(p, particles)
 
     return
@@ -902,6 +957,8 @@ def step2D(particles:Iterable[list, array]) -> None:
     Args:
         particles: VPython Sphere object iterator, contains all particle objects in the simulation.
     '''
+    global catalystsToSimulate
+
     for p in particles:
         if neighbourImplementation: lastPos = mag(p.pos)
 
@@ -913,9 +970,16 @@ def step2D(particles:Iterable[list, array]) -> None:
         if not (wallCollision > p.pos.x > -wallCollision):
             p.v.x *= -1
             p.pos += p.v*dt
+
+            if ((globalCatalyzeReactions) and (p.type in catalystsToSimulate)):
+                changeCatalyst(p)
+
         if not (wallCollision > p.pos.y > -wallCollision):
             p.v.y *= -1
             p.pos += p.v*dt
+
+            if ((globalCatalyzeReactions) and (p.type in catalystsToSimulate)):
+                changeCatalyst(p)
 
         if ((neighbourImplementation) and (not globalUpdateNeighbour) and (p.lastUpdatePosDistance >= p.neighbourShell)): updateNeighbours(p, particles)
     
@@ -935,6 +999,7 @@ def stepSimulation():
         manager['neighbourIterator'] = 1
 
     rate(fps)
+    checkCatalyst(globalParticles)
     manager['runFunction'](globalParticles)
     collisionDetection(globalParticles)
 
@@ -973,16 +1038,20 @@ def run(d3:bool=True) -> None:
     Args:
         d3: bool, True if the simulation is 3-Dimensional, false else.
     '''
-    global globalStart, startSimulationButton, manager
+    global globalStart, startSimulationButton, manager, showTemperature, showConcentrations, showHistogram
 
     if d3: manager['runFunction'] = step3D
     else: manager['runFunction'] = step2D
 
     generateParticlesAndCurves(d3)
     generateConcentrations()
-    updateTemperature()
-    updateConcentrations()
-    updateVelocities()
+
+    if showTemperature:
+        updateTemperature()
+    if showConcentrations:
+        updateConcentrations()
+    if showHistogram:
+        updateVelocities()
 
     startSimulationButton.disabled = False
 
@@ -1132,7 +1201,7 @@ neighbourImplementation = True
 # DO NOT CHANGE!!! NOT IMPLEMENTED CORRECTLY! WILL MAKE SIMULATION RUN SLOWER (MUCH SLOWER)!
 globalUpdateNeighbour = True
 # Defines if the histogram and velocities graph is created and shown
-showHistogram = True
+showHistogram = False
 # Defines if the concentrations graph is created and shown
 showConcentrations = True
 # Defines if the temperature graph is created and shown
@@ -1140,9 +1209,17 @@ showTemperature = True
 
 
 
+# Catalysts configuration
+# Define if there will be catalysts
+globalCatalyzeReactions = False
+# Decay implementation
+globalCatalyzeDecay = False
+
+
+
 # Wall variables
 # Size of each wall (Angstrom)
-side = 3
+side = 5
 # Thickness of each wall
 thickness = .5
 
@@ -1200,11 +1277,13 @@ neighbourMaxShellBuffer = 2.2
 
 
 
-# Elements and Molecules
-# List of element to simulate (atomic number)
+# Elements, Molecules and catalysts
+# Dictionary of element to simulate (atomic number)
 elementsToSimulate = {1: 300}
-# List of molecules to simulate
+# Dictionary of molecules to simulate
 moleculesToSimulate = {'H2': 0}
+# Dictionary of catalysts to simulate
+catalystsToSimulate = {1: 'Fe'}
 # Total number of particles
 nParticles = sum(elementsToSimulate.values()) + sum(moleculesToSimulate.values())
 
@@ -1255,7 +1334,7 @@ loopConcentrationVerboseCount = 25
 
 # Curve fitting
 # Define the stop simulation iteration
-globalFitCurveStop = False
+globalFitCurveStop = True
 fitCurveStopDelay = 2e4
 # Define fitting buffer
 globalFitBuffer = 1e2
