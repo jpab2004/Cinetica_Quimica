@@ -1211,7 +1211,7 @@ showTemperature = True
 
 # Catalysts configuration
 # Define if there will be catalysts
-globalCatalyzeReactions = False
+globalCatalyzeReactions = True
 # Decay implementation
 globalCatalyzeDecay = False
 
