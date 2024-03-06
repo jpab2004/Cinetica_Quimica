@@ -771,7 +771,7 @@ def createFitCurve(params):
 
 
 
-def generateFitTable(p:[int,str], result, law:bool=False):
+def generateFitTable(p:list[int,str], result, law:bool=False):
     '''Generates the table of the fitted parameters.
     
     Args:
